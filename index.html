@@ -197,6 +197,7 @@ body {
 }
 
 .btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.btn:active { transform: scale(0.96); background: rgba(0,229,160,0.18); transition: transform 0.05s, background 0.05s; }
 
 .btn-primary {
   background: rgba(0,229,160,0.12);
@@ -205,6 +206,7 @@ body {
 }
 
 .btn-primary:hover { background: rgba(0,229,160,0.2); }
+.btn-primary:active { transform: scale(0.96); background: rgba(0,229,160,0.32); }
 
 .content {
   flex: 1;
@@ -382,7 +384,8 @@ body {
   transition: all 0.12s;
   white-space: nowrap;
 }
-.chart-btn:hover { color: var(--c-text); }
+.chart-btn:hover { color: var(--c-text); background: rgba(255,255,255,0.05); }
+.chart-btn:active { transform: scale(0.94); background: rgba(0,229,160,0.25); transition: transform 0.05s, background 0.05s; }
 .chart-btn.active {
   background: rgba(0,229,160,0.12);
   border-color: rgba(0,229,160,0.35);
@@ -415,7 +418,13 @@ body {
   white-space: nowrap;
 }
 .sim-btn:hover { border-color: var(--c-accent); color: var(--c-accent); }
+.sim-btn:active { transform: scale(0.94); background: rgba(0,229,160,0.22); transition: transform 0.05s, background 0.05s; }
 .sim-btn.active { background: rgba(0,229,160,0.12); border-color: rgba(0,229,160,0.35); color: var(--c-accent); }
+
+/* sector cell click feedback */
+.hm-cell { cursor: pointer; transition: transform 0.08s, filter 0.12s; }
+.hm-cell:hover { filter: brightness(1.15); transform: scale(1.01); }
+.hm-cell:active { transform: scale(0.98); filter: brightness(1.3); }
 
 /* ── Mobile nav ── */
 .mob-nav {
@@ -1070,15 +1079,19 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
           <div style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <button class="chart-btn active" onclick="filterFundScreener('all',this)">全て</button>
-              <button class="chart-btn" onclick="filterFundScreener('nisa',this)">NISA対応</button>
+              <button class="chart-btn" onclick="filterFundScreener('tsumitate',this)">🏦 つみたて投資枠</button>
+              <button class="chart-btn" onclick="filterFundScreener('seicho',this)">🌱 成長投資枠</button>
               <button class="chart-btn" onclick="filterFundScreener('low',this)">低コスト(≤0.1%)</button>
               <button class="chart-btn" onclick="filterFundScreener('reinvest',this)">再投資型</button>
               <button class="chart-btn" onclick="filterFundScreener('safe',this)">蛸足なし</button>
               <button class="chart-btn" onclick="filterFundScreener('index',this)">インデックス</button>
               <button class="chart-btn" onclick="filterFundScreener('theme',this)">テーマ</button>
             </div>
+            <div style="font-size:11px;color:var(--c-muted);line-height:1.5;background:rgba(79,142,247,0.04);border:1px solid rgba(79,142,247,0.15);border-radius:6px;padding:8px 10px;">
+              💡 <strong style="color:var(--c-text);">つみたて投資枠</strong>＝年120万円・低コスト長期向け。<strong style="color:var(--c-text);">成長投資枠</strong>＝年240万円・テーマ/個別株含む。両方併用可。
+            </div>
             <table class="data-table">
-              <thead><tr><th>ファンド名</th><th>手数料</th><th>1年</th><th>純資産</th><th>NISA</th><th>蛸足</th></tr></thead>
+              <thead><tr><th>ファンド名</th><th>手数料</th><th>1年</th><th>純資産</th><th>NISA枠</th><th>蛸足</th></tr></thead>
               <tbody id="funds-screener-tbody">
                 <tr><td colspan="6" style="text-align:center;color:var(--c-muted);padding:20px;">読み込み中...</td></tr>
               </tbody>
@@ -1419,6 +1432,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     ═══════════════════════════════════════ -->
     <div class="screen" id="screen-stock-ranking">
 
+      <!-- Market filter -->
+      <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+        <span style="font-size:11px; color:var(--c-muted); margin-right:4px;">市場：</span>
+        <button class="chart-btn active" data-mkt="all" onclick="setSrMarket('all',this)">🌐 全て</button>
+        <button class="chart-btn" data-mkt="jp" onclick="setSrMarket('jp',this)">🇯🇵 日本株のみ</button>
+        <button class="chart-btn" data-mkt="us" onclick="setSrMarket('us',this)">🇺🇸 米国株のみ</button>
+      </div>
+
       <!-- Ranking tabs -->
       <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
         <button class="chart-btn active" id="sr-tab-rise" onclick="showStockRank('rise',this)">🔥 急騰</button>
@@ -1437,6 +1458,20 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       <div id="sr-desc" style="background:rgba(0,229,160,0.05); border:1px solid rgba(0,229,160,0.15); border-radius:10px; padding:10px 14px; font-family:var(--f-jp); font-size:12px; color:var(--c-muted); line-height:1.6;">
         本日の急騰ランキング。前日終値比の騰落率上位銘柄を表示。
       </div>
+
+      <!-- AI score explanation -->
+      <details style="background:var(--c-panel); border:1px solid var(--c-border); border-radius:10px; padding:10px 14px;">
+        <summary style="cursor:pointer; font-size:12px; color:var(--c-text); font-weight:600;">🤖 AIスコアとは？ <span style="color:var(--c-muted);font-weight:400;">（クリックで開く）</span></summary>
+        <div style="font-size:11px; color:var(--c-muted); line-height:1.7; margin-top:8px;">
+          <strong style="color:var(--c-text);">100点満点の総合評価</strong>。以下の4要素を加重平均して算出：<br>
+          ① <strong style="color:var(--c-accent);">モメンタム(30%)</strong>：直近の騰落率・出来高変化<br>
+          ② <strong style="color:var(--c-blue);">ファンダメンタル(30%)</strong>：PER・PBR・ROE・売上成長率<br>
+          ③ <strong style="color:var(--c-yellow);">テクニカル(20%)</strong>：RSI・BB・MA収束/拡散<br>
+          ④ <strong style="color:#c574f7;">市場センチメント(20%)</strong>：ニュース・セクタートレンド<br>
+          <br>
+          <strong style="color:var(--c-text);">スコア帯</strong>：90+ 強い買い ／ 75-89 買い増し ／ 60-74 継続保有 ／ 40-59 様子見 ／ 〜39 売却検討
+        </div>
+      </details>
 
       <!-- Table -->
       <div class="card" style="padding:0; overflow:hidden;">
@@ -1545,6 +1580,12 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
             <button class="chart-btn" id="boro-sort-vol" onclick="boroSort('vol',this)">出来高順</button>
             <button class="btn btn-primary" style="font-size:12px; padding:6px 14px;" onclick="loadBoroScreen()">更新</button>
           </div>
+        </div>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+          <span style="font-size:11px; color:var(--c-muted);">価格上限：</span>
+          <button class="chart-btn" data-bp="500" onclick="setBoroMaxPrice(500,this)">¥500以下（超低位）</button>
+          <button class="chart-btn active" data-bp="1500" onclick="setBoroMaxPrice(1500,this)">¥1,500以下（標準）</button>
+          <button class="chart-btn" data-bp="3000" onclick="setBoroMaxPrice(3000,this)">¥3,000以下（拡張）</button>
         </div>
       </div>
 
@@ -1752,7 +1793,10 @@ function navigate(screen, navEl, fromMob) {
   $('content').scrollTop = 0;
 
   // Lazy initializers per screen
-  if (screen === 'chart' && !window._chartInited) { window._chartInited = true; loadChart('NVDA', 'D'); }
+  if (screen === 'chart' && !window._chartInited) {
+    window._chartInited = true;
+    setChartTicker('8035', document.querySelector('#screen-chart [onclick*="setChartTicker(\'8035\'"]'));
+  }
   if (screen === 'boro') loadBoroScreen();
   if (screen === 'portfolio') renderPortfolio();
   if (screen === 'stock' && !window._stockInited) { window._stockInited = true; loadStockQuote('8035'); }
@@ -1786,6 +1830,15 @@ function toggleMarket(m, btn) {
     if (oc.includes('toggleMarket')) b.classList.remove('active');
   });
   btn.classList.add('active');
+  // 個別株ランキングへ移動して市場フィルタを適用
+  if (typeof setSrMarket === 'function') {
+    setSrMarket(m === 'us' ? 'us' : m === 'jp' ? 'jp' : 'all', null);
+    // ボタン active 状態を反映
+    document.querySelectorAll('#screen-stock-ranking [data-mkt]').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-mkt') === (m === 'us' ? 'us' : m === 'jp' ? 'jp' : 'all'));
+    });
+  }
+  navigate('stock-ranking', null);
 }
 function togglePeriod(p, btn) {
   document.querySelectorAll('#screen-heatmap .chart-btn').forEach(b => {
@@ -1793,6 +1846,14 @@ function togglePeriod(p, btn) {
     if (oc.includes('togglePeriod')) b.classList.remove('active');
   });
   btn.classList.add('active');
+  // 期間切り替え＝チャート画面に移動して時間軸を変更
+  const tfMap = { '1d':'1d', '1w':'1w', '1m':'1mo' };
+  const tf = tfMap[p] || '1d';
+  navigate('chart', null);
+  setTimeout(() => {
+    const tfBtn = $('tf-' + tf);
+    if (tfBtn) setTimeframe(tf, tfBtn);
+  }, 50);
 }
 function filterSector(name) {
   if (event && event.target) {
@@ -1802,6 +1863,12 @@ function filterSector(name) {
       setTimeout(() => cell.style.outline = '', 400);
     }
   }
+  // 個別株ランキング画面に移動し、セクター情報を表示
+  navigate('stock-ranking', null);
+  setTimeout(() => {
+    const desc = $('sr-desc');
+    if (desc) desc.textContent = '「' + name + '」セクターを含む銘柄を表示中。下のタブでカテゴリ切替可能。';
+  }, 100);
 }
 window.toggleMarket = toggleMarket;
 window.togglePeriod = togglePeriod;
@@ -1839,7 +1906,7 @@ async function loadMarketData() {
   const [d, nk, tx, sp, gd] = await Promise.all([
     edgeFetch({ action: 'market-data' }),
     edgeFetch({ action: 'quote', symbol: '^N225' }),
-    edgeFetch({ action: 'quote', symbol: '^TPX' }),
+    edgeFetch({ action: 'quote', symbol: '1306.T' }),
     edgeFetch({ action: 'quote', symbol: '^GSPC' }),
     edgeFetch({ action: 'quote', symbol: 'GC=F' })
   ]);
@@ -1852,7 +1919,7 @@ async function loadMarketData() {
       q.changePercent);
   }
 
-  // TOPIX (JPY)
+  // TOPIX (1306.T ETF が TOPIX 指数とほぼ等価)
   if (tx && tx.quote && tx.quote.price != null) {
     const q = tx.quote;
     updateStatCard(statCard('TOPIX'),
@@ -2392,10 +2459,10 @@ function setChartTicker(code, btn) {
     const oc = b.getAttribute('onclick') || '';
     if (oc.includes('setChartTicker')) b.classList.remove('active');
   });
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   const meta = SHIKIHO_DB[code];
   const sym = meta ? meta.sym : (/^\d{4}$/.test(code) ? code+'.T' : code);
-  $('chart-ticker').textContent = (meta ? meta.name : code) + ' (' + code + ')';
+  if ($('chart-ticker')) $('chart-ticker').textContent = (meta ? meta.name : code) + ' (' + code + ')';
   loadChart(sym, _chartResolution);
 }
 function toggleIndicator(ind, btn) {
@@ -2427,46 +2494,62 @@ function genRows(template, count) {
 }
 
 const SR_BIG_POOL = [
-  { name:'東京エレクトロン', code:'8035', market:'東プ', sector:'半導体' },
-  { name:'レーザーテック', code:'6920', market:'東プ', sector:'半導体' },
-  { name:'NVIDIA', code:'NVDA', market:'米', sector:'AI' },
-  { name:'信越化学', code:'4063', market:'東プ', sector:'化学' },
-  { name:'ソシオネクスト', code:'6526', market:'東プ', sector:'半導体' },
-  { name:'ルネサス', code:'6723', market:'東プ', sector:'半導体' },
-  { name:'キーエンス', code:'6861', market:'東プ', sector:'精密' },
-  { name:'TDK', code:'6762', market:'東プ', sector:'電子部品' },
-  { name:'HOYA', code:'7741', market:'東プ', sector:'精密' },
-  { name:'ディスコ', code:'6146', market:'東プ', sector:'半導体' },
-  { name:'村田製作所', code:'6981', market:'東プ', sector:'電子部品' },
-  { name:'ソニーグループ', code:'6758', market:'東プ', sector:'電機' },
-  { name:'三菱UFJ', code:'8306', market:'東プ', sector:'銀行' },
-  { name:'トヨタ自動車', code:'7203', market:'東プ', sector:'自動車' },
-  { name:'ホンダ', code:'7267', market:'東プ', sector:'自動車' },
-  { name:'三井住友 FG', code:'8316', market:'東プ', sector:'銀行' },
-  { name:'日産自動車', code:'7201', market:'東プ', sector:'自動車' },
-  { name:'みずほ FG', code:'8411', market:'東プ', sector:'銀行' },
-  { name:'マツダ', code:'7261', market:'東プ', sector:'自動車' },
-  { name:'三菱商事', code:'8058', market:'東プ', sector:'商社' },
-  { name:'伊藤忠商事', code:'8001', market:'東プ', sector:'商社' },
-  { name:'KDDI', code:'9433', market:'東プ', sector:'通信' },
-  { name:'NTT', code:'9432', market:'東プ', sector:'通信' },
-  { name:'武田薬品', code:'4502', market:'東プ', sector:'医薬品' },
-  { name:'ENEOS HD', code:'5020', market:'東プ', sector:'エネルギー' },
-  { name:'日本たばこ産業', code:'2914', market:'東プ', sector:'食品' },
-  { name:'オリックス', code:'8591', market:'東プ', sector:'金融' },
-  { name:'東京海上 HD', code:'8766', market:'東プ', sector:'保険' },
-  { name:'NTT データG', code:'9613', market:'東プ', sector:'IT' },
-  { name:'ファナック', code:'6954', market:'東プ', sector:'精密' },
-  { name:'エムスリー', code:'2413', market:'東プ', sector:'ヘルスケア' },
-  { name:'JR東日本', code:'9020', market:'東プ', sector:'運輸' },
-  { name:'ANA HD', code:'9202', market:'東プ', sector:'航空' },
-  { name:'日本電信電話', code:'9434', market:'東プ', sector:'通信' },
-  { name:'BASE', code:'4477', market:'東グ', sector:'EC' },
-  { name:'グロービス', code:'4056', market:'東プ', sector:'教育' },
-  { name:'Appier Group', code:'4180', market:'東プ', sector:'AI' },
-  { name:'カオナビ', code:'4435', market:'東プ', sector:'SaaS' },
-  { name:'フリー', code:'4478', market:'東グ', sector:'SaaS' },
-  { name:'Sansan', code:'4443', market:'東プ', sector:'SaaS' }
+  // 半導体・AI (急騰候補)
+  { name:'東京エレクトロン', code:'8035', market:'東プ', sector:'半導体', tags:['rise','growth','ai'] },
+  { name:'レーザーテック', code:'6920', market:'東プ', sector:'半導体', tags:['rise','growth','ai'] },
+  { name:'信越化学', code:'4063', market:'東プ', sector:'化学', tags:['rise','growth'] },
+  { name:'ソシオネクスト', code:'6526', market:'東プ', sector:'半導体', tags:['rise','small','ai'] },
+  { name:'ルネサス', code:'6723', market:'東プ', sector:'半導体', tags:['rise','growth'] },
+  { name:'ディスコ', code:'6146', market:'東プ', sector:'半導体', tags:['rise','premium'] },
+  { name:'アドバンテスト', code:'6857', market:'東プ', sector:'半導体', tags:['rise','growth','ai'] },
+  { name:'キーエンス', code:'6861', market:'東プ', sector:'精密', tags:['premium','growth'] },
+  { name:'TDK', code:'6762', market:'東プ', sector:'電子部品', tags:['rise','growth'] },
+  { name:'HOYA', code:'7741', market:'東プ', sector:'精密', tags:['premium'] },
+  { name:'村田製作所', code:'6981', market:'東プ', sector:'電子部品', tags:['rise','dividend'] },
+  { name:'ソニーグループ', code:'6758', market:'東プ', sector:'電機', tags:['rise','ai','growth'] },
+  // 米国株 (US)
+  { name:'NVIDIA', code:'NVDA', market:'米', sector:'AI', tags:['rise','growth','ai','premium'] },
+  { name:'Apple', code:'AAPL', market:'米', sector:'IT', tags:['rise','dividend','premium'] },
+  { name:'Microsoft', code:'MSFT', market:'米', sector:'IT', tags:['rise','growth','ai','premium'] },
+  { name:'Amazon', code:'AMZN', market:'米', sector:'EC', tags:['rise','growth'] },
+  { name:'Meta', code:'META', market:'米', sector:'IT', tags:['rise','ai','growth'] },
+  { name:'Alphabet', code:'GOOGL', market:'米', sector:'IT', tags:['rise','ai','growth'] },
+  { name:'Tesla', code:'TSLA', market:'米', sector:'自動車', tags:['rise','volume'] },
+  { name:'AMD', code:'AMD', market:'米', sector:'半導体', tags:['rise','ai','volume'] },
+  { name:'Broadcom', code:'AVGO', market:'米', sector:'半導体', tags:['rise','dividend','premium'] },
+  { name:'Palantir', code:'PLTR', market:'米', sector:'AI', tags:['rise','ai','growth'] },
+  { name:'Coca-Cola', code:'KO', market:'米', sector:'食品', tags:['dividend'] },
+  { name:'JPMorgan', code:'JPM', market:'米', sector:'銀行', tags:['dividend','per'] },
+  // 銀行・自動車 (急落候補・配当)
+  { name:'三菱UFJ', code:'8306', market:'東プ', sector:'銀行', tags:['fall','dividend','per'] },
+  { name:'三井住友 FG', code:'8316', market:'東プ', sector:'銀行', tags:['fall','dividend','per'] },
+  { name:'みずほ FG', code:'8411', market:'東プ', sector:'銀行', tags:['fall','dividend','per','cheap'] },
+  { name:'トヨタ自動車', code:'7203', market:'東プ', sector:'自動車', tags:['fall','dividend','per'] },
+  { name:'ホンダ', code:'7267', market:'東プ', sector:'自動車', tags:['fall','dividend','per'] },
+  { name:'日産自動車', code:'7201', market:'東プ', sector:'自動車', tags:['fall','cheap','per'] },
+  { name:'マツダ', code:'7261', market:'東プ', sector:'自動車', tags:['fall','cheap','per'] },
+  // 商社・通信 (高配当・PER)
+  { name:'三菱商事', code:'8058', market:'東プ', sector:'商社', tags:['dividend','per','roe'] },
+  { name:'伊藤忠商事', code:'8001', market:'東プ', sector:'商社', tags:['dividend','per','roe'] },
+  { name:'三井物産', code:'8031', market:'東プ', sector:'商社', tags:['dividend','per','roe'] },
+  { name:'KDDI', code:'9433', market:'東プ', sector:'通信', tags:['dividend','premium'] },
+  { name:'NTT', code:'9432', market:'東プ', sector:'通信', tags:['dividend','cheap'] },
+  { name:'武田薬品', code:'4502', market:'東プ', sector:'医薬品', tags:['dividend','per'] },
+  { name:'ENEOS HD', code:'5020', market:'東プ', sector:'エネルギー', tags:['dividend','cheap','per'] },
+  { name:'日本たばこ産業', code:'2914', market:'東プ', sector:'食品', tags:['dividend','per'] },
+  { name:'オリックス', code:'8591', market:'東プ', sector:'金融', tags:['dividend','per'] },
+  { name:'東京海上 HD', code:'8766', market:'東プ', sector:'保険', tags:['dividend','roe'] },
+  // 大型優良 (premium, ROE, AI スコア上位)
+  { name:'ファナック', code:'6954', market:'東プ', sector:'精密', tags:['premium','dividend'] },
+  { name:'エムスリー', code:'2413', market:'東プ', sector:'ヘルスケア', tags:['growth','small'] },
+  { name:'JR東日本', code:'9020', market:'東プ', sector:'運輸', tags:['dividend','per'] },
+  { name:'ANA HD', code:'9202', market:'東プ', sector:'航空', tags:['fall','cheap'] },
+  // グロース・SaaS (small, growth, AI)
+  { name:'BASE', code:'4477', market:'東グ', sector:'EC', tags:['small','growth','volume'] },
+  { name:'Appier Group', code:'4180', market:'東プ', sector:'AI', tags:['small','growth','ai'] },
+  { name:'カオナビ', code:'4435', market:'東プ', sector:'SaaS', tags:['small','growth'] },
+  { name:'フリー', code:'4478', market:'東グ', sector:'SaaS', tags:['small','growth'] },
+  { name:'Sansan', code:'4443', market:'東プ', sector:'SaaS', tags:['small','growth','volume'] }
 ];
 
 function makeRankRow(p, type, rank) {
@@ -2566,11 +2649,27 @@ const SR_DESC = {
 
 let _srType = 'rise';
 let _srShown = 10;
+let _srMarket = 'all'; // 'all' | 'jp' | 'us'
 
 function buildSrRows(type, n) {
-  const pool = SR_BIG_POOL.slice(0, Math.min(SR_BIG_POOL.length, n));
-  return pool.map((p, i) => makeRankRow(p, type, i+1));
+  // タグでカテゴリにマッチする銘柄を優先
+  let pool = SR_BIG_POOL.filter(p => p.tags && p.tags.includes(type));
+  // タグでマッチしない場合は全プールから補充
+  if (pool.length < 5) pool = pool.concat(SR_BIG_POOL.filter(p => !pool.includes(p)));
+  // 日米フィルター
+  if (_srMarket === 'jp') pool = pool.filter(p => p.market !== '米');
+  if (_srMarket === 'us') pool = pool.filter(p => p.market === '米');
+  return pool.slice(0, n).map((p, i) => makeRankRow(p, type, i+1));
 }
+
+function setSrMarket(m, btn) {
+  _srMarket = m;
+  document.querySelectorAll('#screen-stock-ranking [data-mkt]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  _srShown = 10;
+  renderSrRows();
+}
+window.setSrMarket = setSrMarket;
 
 function showStockRank(type, btn) {
   _srType = type; _srShown = 10;
@@ -2652,27 +2751,28 @@ $('content').addEventListener('scroll', function() {
 /* ═══════════════════════════════════════════════════════════════════════
    9. 投信ランキング (8カテゴリ × 拡張)
    ═══════════════════════════════════════════════════════════════════════ */
+// nisaTier: '積立'=つみたて投資枠対象 / '成長'=成長投資枠対象 / '両方'=両方対象 / '対象外'
 const FUND_POOL = [
-  { name:'eMAXIS Slim 全世界株式', cat:'インデックス', fee:0.057, ret1:18.4, ret3:54.8, divid:0, assets:42000, nisa:'○', tako:'安全', rate:0.07, est:'2018/10' },
-  { name:'eMAXIS Slim 米国株式(S&P500)', cat:'インデックス', fee:0.077, ret1:22.1, ret3:68.4, divid:0, assets:58000, nisa:'○', tako:'安全', rate:0.09, est:'2018/7' },
-  { name:'楽天・S&P500インデックス', cat:'インデックス', fee:0.077, ret1:21.8, ret3:67.2, divid:0, assets:14000, nisa:'○', tako:'安全', rate:0.09, est:'2023/10' },
-  { name:'SBI・V・S&P500', cat:'インデックス', fee:0.093, ret1:21.6, ret3:67.8, divid:0, assets:18000, nisa:'○', tako:'安全', rate:0.09, est:'2019/9' },
-  { name:'eMAXIS Slim 先進国株式', cat:'インデックス', fee:0.093, ret1:16.8, ret3:48.2, divid:0.8, assets:21000, nisa:'○', tako:'安全', rate:0.07, est:'2017/2' },
-  { name:'ニッセイ外国株式インデックス', cat:'インデックス', fee:0.093, ret1:16.2, ret3:46.8, divid:0.6, assets:12000, nisa:'○', tako:'安全', rate:0.07, est:'2013/12' },
-  { name:'楽天・全世界株式インデックス', cat:'インデックス', fee:0.132, ret1:17.8, ret3:52.1, divid:0, assets:6000, nisa:'○', tako:'安全', rate:0.07, est:'2017/9' },
-  { name:'たわらノーロード先進国株式', cat:'インデックス', fee:0.099, ret1:15.9, ret3:44.2, divid:0, assets:8000, nisa:'○', tako:'安全', rate:0.07, est:'2015/12' },
-  { name:'ひふみプラス', cat:'アクティブ', fee:1.078, ret1:12.4, ret3:38.4, divid:2.4, assets:4000, nisa:'○', tako:'安全', rate:0.08, est:'2012/5' },
-  { name:'グローバルAIファンド', cat:'テーマ', fee:1.925, ret1:18.8, ret3:52.4, divid:8.2, assets:2000, nisa:'✕', tako:'⚠蛸足', rate:0.10, est:'2016/9' },
-  { name:'楽天・オールカントリー', cat:'インデックス', fee:0.056, ret1:18.6, ret3:55.0, divid:0, assets:4000, nisa:'○', tako:'安全', rate:0.07, est:'2023/10' },
-  { name:'SBI・V・全米株式', cat:'インデックス', fee:0.093, ret1:22.2, ret3:67.5, divid:0, assets:3000, nisa:'○', tako:'安全', rate:0.09, est:'2023/9' },
-  { name:'インド株式インデックスF', cat:'インデックス', fee:0.440, ret1:24.2, ret3:48.5, divid:0, assets:5000, nisa:'○', tako:'安全', rate:0.10, est:'2023/3' },
-  { name:'AIメガトレンドファンド', cat:'テーマ', fee:0.990, ret1:26.4, ret3:0, divid:0, assets:1000, nisa:'○', tako:'安全', rate:0.08, est:'2024/1' },
-  { name:'半導体セクターF', cat:'テーマ', fee:0.880, ret1:32.4, ret3:0, divid:0, assets:600, nisa:'○', tako:'安全', rate:0.12, est:'2024/3' },
-  { name:'Tracers S&P500配当貴族', cat:'インデックス', fee:0.112, ret1:14.2, ret3:42.0, divid:1.8, assets:2000, nisa:'○', tako:'安全', rate:0.07, est:'2022/1' },
-  { name:'日本高配当株式F', cat:'国内株', fee:0.480, ret1:8.4, ret3:24.6, divid:4.2, assets:8000, nisa:'○', tako:'安全', rate:0.06, est:'2017/3' },
-  { name:'毎月分配型世界債券F', cat:'債券', fee:1.540, ret1:3.2, ret3:8.4, divid:6.8, assets:3000, nisa:'✕', tako:'⚠蛸足', rate:0.04, est:'2008/4' },
-  { name:'ハイイールド社債F', cat:'債券', fee:1.320, ret1:5.8, ret3:14.2, divid:5.4, assets:5000, nisa:'○', tako:'⚠要確認', rate:0.05, est:'2010/9' },
-  { name:'宇宙・次世代通信F', cat:'テーマ', fee:1.650, ret1:14.8, ret3:0, divid:0, assets:400, nisa:'✕', tako:'安全', rate:0.09, est:'2023/11' }
+  { name:'eMAXIS Slim 全世界株式', cat:'インデックス', fee:0.057, ret1:18.4, ret3:54.8, divid:0, assets:42000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2018/10' },
+  { name:'eMAXIS Slim 米国株式(S&P500)', cat:'インデックス', fee:0.077, ret1:22.1, ret3:68.4, divid:0, assets:58000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.09, est:'2018/7' },
+  { name:'楽天・S&P500インデックス', cat:'インデックス', fee:0.077, ret1:21.8, ret3:67.2, divid:0, assets:14000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.09, est:'2023/10' },
+  { name:'SBI・V・S&P500', cat:'インデックス', fee:0.093, ret1:21.6, ret3:67.8, divid:0, assets:18000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.09, est:'2019/9' },
+  { name:'eMAXIS Slim 先進国株式', cat:'インデックス', fee:0.093, ret1:16.8, ret3:48.2, divid:0.8, assets:21000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2017/2' },
+  { name:'ニッセイ外国株式インデックス', cat:'インデックス', fee:0.093, ret1:16.2, ret3:46.8, divid:0.6, assets:12000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2013/12' },
+  { name:'楽天・全世界株式インデックス', cat:'インデックス', fee:0.132, ret1:17.8, ret3:52.1, divid:0, assets:6000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2017/9' },
+  { name:'たわらノーロード先進国株式', cat:'インデックス', fee:0.099, ret1:15.9, ret3:44.2, divid:0, assets:8000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2015/12' },
+  { name:'ひふみプラス', cat:'アクティブ', fee:1.078, ret1:12.4, ret3:38.4, divid:2.4, assets:4000, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.08, est:'2012/5' },
+  { name:'グローバルAIファンド', cat:'テーマ', fee:1.925, ret1:18.8, ret3:52.4, divid:8.2, assets:2000, nisa:'✕', nisaTier:'対象外', tako:'⚠蛸足', rate:0.10, est:'2016/9' },
+  { name:'楽天・オールカントリー', cat:'インデックス', fee:0.056, ret1:18.6, ret3:55.0, divid:0, assets:4000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.07, est:'2023/10' },
+  { name:'SBI・V・全米株式', cat:'インデックス', fee:0.093, ret1:22.2, ret3:67.5, divid:0, assets:3000, nisa:'○', nisaTier:'両方', tako:'安全', rate:0.09, est:'2023/9' },
+  { name:'インド株式インデックスF', cat:'インデックス', fee:0.440, ret1:24.2, ret3:48.5, divid:0, assets:5000, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.10, est:'2023/3' },
+  { name:'AIメガトレンドファンド', cat:'テーマ', fee:0.990, ret1:26.4, ret3:0, divid:0, assets:1000, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.08, est:'2024/1' },
+  { name:'半導体セクターF', cat:'テーマ', fee:0.880, ret1:32.4, ret3:0, divid:0, assets:600, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.12, est:'2024/3' },
+  { name:'Tracers S&P500配当貴族', cat:'インデックス', fee:0.112, ret1:14.2, ret3:42.0, divid:1.8, assets:2000, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.07, est:'2022/1' },
+  { name:'日本高配当株式F', cat:'国内株', fee:0.480, ret1:8.4, ret3:24.6, divid:4.2, assets:8000, nisa:'○', nisaTier:'成長', tako:'安全', rate:0.06, est:'2017/3' },
+  { name:'毎月分配型世界債券F', cat:'債券', fee:1.540, ret1:3.2, ret3:8.4, divid:6.8, assets:3000, nisa:'✕', nisaTier:'対象外', tako:'⚠蛸足', rate:0.04, est:'2008/4' },
+  { name:'ハイイールド社債F', cat:'債券', fee:1.320, ret1:5.8, ret3:14.2, divid:5.4, assets:5000, nisa:'○', nisaTier:'成長', tako:'⚠要確認', rate:0.05, est:'2010/9' },
+  { name:'宇宙・次世代通信F', cat:'テーマ', fee:1.650, ret1:14.8, ret3:0, divid:0, assets:400, nisa:'✕', nisaTier:'対象外', tako:'安全', rate:0.09, est:'2023/11' }
 ];
 
 const FR_DESC = {
@@ -2812,17 +2912,20 @@ function renderFundScreener() {
   const tbody = $('funds-screener-tbody');
   if (!tbody) return;
   let pool = FUND_POOL.slice();
-  if (_fsFilter === 'nisa')    pool = pool.filter(f => f.nisa === '○');
-  if (_fsFilter === 'low')     pool = pool.filter(f => f.fee <= 0.1);
-  if (_fsFilter === 'reinvest') pool = pool.filter(f => f.divid === 0);
-  if (_fsFilter === 'safe')    pool = pool.filter(f => f.tako === '安全');
-  if (_fsFilter === 'index')   pool = pool.filter(f => f.cat === 'インデックス');
-  if (_fsFilter === 'theme')   pool = pool.filter(f => f.cat === 'テーマ');
+  if (_fsFilter === 'tsumitate') pool = pool.filter(f => f.nisaTier === '積立' || f.nisaTier === '両方');
+  if (_fsFilter === 'seicho')    pool = pool.filter(f => f.nisaTier === '成長' || f.nisaTier === '両方');
+  if (_fsFilter === 'low')       pool = pool.filter(f => f.fee <= 0.1);
+  if (_fsFilter === 'reinvest')  pool = pool.filter(f => f.divid === 0);
+  if (_fsFilter === 'safe')      pool = pool.filter(f => f.tako === '安全');
+  if (_fsFilter === 'index')     pool = pool.filter(f => f.cat === 'インデックス');
+  if (_fsFilter === 'theme')     pool = pool.filter(f => f.cat === 'テーマ');
   tbody.innerHTML = '';
   pool.forEach(f => {
     const feeColor = f.fee <= 0.1 ? 'var(--c-accent)' : f.fee <= 0.5 ? 'var(--c-yellow)' : 'var(--c-red)';
     const takoClass = f.tako === '安全' ? 'pill-green' : 'pill-red';
-    const nisaClass = f.nisa === '○' ? 'pill-green' : 'pill-red';
+    const tier = f.nisaTier || (f.nisa === '○' ? '成長' : '対象外');
+    const tierClass = tier === '両方' ? 'pill-green' : tier === '積立' ? 'pill-blue' : tier === '成長' ? 'pill-yellow' : 'pill-red';
+    const tierLabel = tier === '両方' ? '積立+成長' : tier;
     const assetsStr = f.assets >= 10000 ? (f.assets/10000).toFixed(1)+'兆' : (f.assets/100).toFixed(0)+'百億';
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
@@ -2831,7 +2934,7 @@ function renderFundScreener() {
       <td style="font-family:var(--f-en);font-size:12px;font-weight:600;color:${feeColor};">${f.fee.toFixed(3)}%</td>
       <td style="font-family:var(--f-en);font-size:12px;color:var(--c-accent);">+${f.ret1.toFixed(1)}%</td>
       <td style="font-family:var(--f-en);font-size:11px;color:var(--c-muted);">${assetsStr}</td>
-      <td><span class="pill ${nisaClass}" style="font-size:10px;">${f.nisa}</span></td>
+      <td><span class="pill ${tierClass}" style="font-size:10px;">${tierLabel}</span></td>
       <td><span class="pill ${takoClass}" style="font-size:10px;">${f.tako}</span></td>`;
     tbody.appendChild(tr);
   });
@@ -2887,8 +2990,16 @@ window.calcFund = calcFund;
 /* ═══════════════════════════════════════════════════════════════════════
    11. ボロ株スクリーナー (Yahoo Finance バックエンド)
    ═══════════════════════════════════════════════════════════════════════ */
-let _boroData = [], _boroSortKey = 'change';
+let _boroData = [], _boroSortKey = 'change', _boroMaxPrice = 1500;
 let _boroCustom = JSON.parse(localStorage.getItem('boro_custom') || '[]');
+
+function setBoroMaxPrice(p, btn) {
+  _boroMaxPrice = p;
+  document.querySelectorAll('#screen-boro [data-bp]').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderBoroList();
+}
+window.setBoroMaxPrice = setBoroMaxPrice;
 
 function loadBoroScreen() {
   const listEl = $('boro-list');
@@ -2914,7 +3025,16 @@ function renderBoroList() {
     listEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-muted);">データなし</div>';
     return;
   }
-  const sorted = _boroData.slice().sort((a, b) => {
+  // 価格フィルター（ボロ株定義: 上限価格以下のみ）
+  const filtered = _boroData.filter(s => {
+    const p = (s.quote && s.quote.price) || 0;
+    return p > 0 && p <= _boroMaxPrice;
+  });
+  if (!filtered.length) {
+    listEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-muted);font-size:13px;">¥${_boroMaxPrice.toLocaleString()}以下の銘柄なし。上限を上げてください。</div>`;
+    return;
+  }
+  const sorted = filtered.slice().sort((a, b) => {
     if (_boroSortKey === 'change') return (b.quote.changePercent||0) - (a.quote.changePercent||0);
     if (_boroSortKey === 'price') return (a.quote.price||0) - (b.quote.price||0);
     if (_boroSortKey === 'vol') return (b.quote.volume||0) - (a.quote.volume||0);
