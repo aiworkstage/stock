@@ -596,6 +596,10 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
     投信ランキング
   </a>
+  <a class="nav-item" data-screen="boro" onclick="navigate('boro',this)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    ボロ株スクリーナー
+  </a>
 
   <div class="nav-section">ポートフォリオ</div>
   <a class="nav-item" data-screen="portfolio" onclick="navigate('portfolio',this)">
@@ -1478,6 +1482,62 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     </div>
 
     <!-- ═══════════════════════════════════════
+         SCREEN: ボロ株スクリーナー
+    ═══════════════════════════════════════ -->
+    <div class="screen" id="screen-boro">
+
+      <!-- ヘッダー -->
+      <div class="card" style="padding:16px 20px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-family:var(--f-jp); font-size:18px; font-weight:700; color:var(--c-text);">ボロ株スクリーナー</div>
+            <div style="font-size:12px; color:var(--c-muted); margin-top:3px;">低位株・材料株のリアルタイム監視</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="chart-btn active" id="boro-sort-change" onclick="boroSort('change',this)">騰落率順</button>
+            <button class="chart-btn" id="boro-sort-price" onclick="boroSort('price',this)">株価順</button>
+            <button class="chart-btn" id="boro-sort-vol" onclick="boroSort('vol',this)">出来高順</button>
+            <button class="btn btn-primary" style="font-size:12px; padding:6px 14px;" onclick="loadBoroScreen()">更新</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- カスタム銘柄追加 -->
+      <div class="card" style="padding:14px 18px;">
+        <div style="font-size:13px; font-weight:600; color:var(--c-text); margin-bottom:10px;">ウォッチリストに追加</div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="boro-add-code" placeholder="銘柄コード（例: 9999）" style="width:200px;" maxlength="6">
+          <input type="text" id="boro-add-name" placeholder="銘柄名（省略可）" style="width:160px;">
+          <button class="btn btn-primary" style="font-size:12px; padding:6px 14px;" onclick="boroAddStock()">追加</button>
+          <button class="btn" style="font-size:12px; padding:6px 14px; color:var(--c-red);" onclick="boroClearCustom()">カスタムをリセット</button>
+        </div>
+      </div>
+
+      <!-- スクリーナーテーブル -->
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:60px 1fr 100px 90px 90px 80px; gap:0; padding:10px 16px; border-bottom:1px solid var(--c-border); font-size:11px; color:var(--c-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">
+          <div>コード</div>
+          <div>銘柄名</div>
+          <div style="text-align:right;">現在値</div>
+          <div style="text-align:right;">前日比</div>
+          <div style="text-align:right;">騰落率</div>
+          <div style="text-align:right;">高値/安値</div>
+        </div>
+        <div id="boro-list" style="min-height:200px;">
+          <div style="display:flex; align-items:center; justify-content:center; height:200px; color:var(--c-muted); font-size:14px;">
+            読み込み中...
+          </div>
+        </div>
+      </div>
+
+      <!-- 注意書き -->
+      <div style="font-size:11px; color:var(--c-dim); padding:8px 4px; line-height:1.6;">
+        ※ ボロ株は価格変動リスクが非常に高く、流動性リスクも伴います。本情報は投資判断の参考であり、投資助言ではありません。<br>
+        ※ Finnhub 無料プランの場合、一部日本株データが取得できない場合があります（TSEデータ制限）。
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════
          SCREEN: API接続設定
     ═══════════════════════════════════════ -->
     <div class="screen" id="screen-api-settings">
@@ -1658,6 +1718,7 @@ var screenTitles = {
   'api-settings': 'API接続設定',
   'stock-ranking': '個別株ランキング',
   'fund-ranking':  '投信ランキング',
+  'boro':          'ボロ株スクリーナー',
   heatmap:   'セクターヒートマップ',
   chart:     'チャート分析',
   anomaly:   'アノマリーカレンダー',
@@ -2595,6 +2656,338 @@ setInterval(function() {
   }
   load();setInterval(load,30000);
 })();
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STOCK APP — Real-data engine
+// ═══════════════════════════════════════════════════════════
+var EDGE = 'https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data';
+
+// ── 現在選択中の状態 ───────────────────────────────────────
+var _chartSymbol = 'NVDA';
+var _chartResolution = 'D';
+var _stockSymbol = '8035.T';
+var _boroData = [];
+var _boroSortKey = 'change';
+var _boroCustom = JSON.parse(localStorage.getItem('boro_custom') || '[]');
+
+// ── ユーティリティ ─────────────────────────────────────────
+function edgeFetch(params) {
+  var qs = Object.entries(params).map(function(kv){ return kv[0]+'='+encodeURIComponent(kv[1]); }).join('&');
+  return fetch(EDGE + '?' + qs).then(function(r){ return r.ok ? r.json() : null; });
+}
+
+function pct(v) {
+  if (v == null) return '—';
+  var s = (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+  return s;
+}
+function pctColor(v) {
+  if (v == null) return 'var(--c-muted)';
+  return v >= 0 ? 'var(--c-accent)' : 'var(--c-red)';
+}
+function fmtPrice(p, isJpy) {
+  if (p == null) return '—';
+  if (isJpy) return '¥' + p.toLocaleString('ja-JP', {maximumFractionDigits:0});
+  return '$' + p.toFixed(2);
+}
+
+// ── チャート SVG レンダラー ────────────────────────────────
+function renderCandleChart(candles) {
+  var svg = document.getElementById('main-chart');
+  if (!svg || !candles || !candles.c || !candles.c.length) return;
+
+  var W=900, H=280, LPADS=52, RPAD=4, TPAD=10, BPAD=60;
+  var cW = W - LPADS - RPAD;
+  var cH = H - TPAD - BPAD;
+
+  var minP = Math.min.apply(null, candles.l);
+  var maxP = Math.max.apply(null, candles.h);
+  var pad = (maxP - minP) * 0.08 || 1;
+  minP -= pad; maxP += pad;
+  var priceSpan = maxP - minP;
+
+  var n = candles.c.length;
+  var step = cW / n;
+  var barW = Math.max(1.5, step * 0.65);
+
+  function sy(p) { return TPAD + cH * (1 - (p - minP) / priceSpan); }
+  function sx(i) { return LPADS + step * i + step / 2; }
+
+  var maxV = Math.max.apply(null, candles.v) || 1;
+  var volMaxH = 45;
+
+  var out = '';
+
+  // Grid + Y labels
+  for (var gi=0; gi<=4; gi++) {
+    var gy = TPAD + cH/4*gi;
+    var gp = maxP - priceSpan/4*gi;
+    out += '<line x1="'+LPADS+'" y1="'+gy+'" x2="'+W+'" y2="'+gy+'" stroke="#1e2a40" stroke-width="1"/>';
+    var label = gp>=10000 ? (gp/10000).toFixed(1)+'万' : gp>=1000 ? gp.toFixed(0) : gp.toFixed(2);
+    out += '<text x="2" y="'+(gy+4)+'" fill="#3a4560" font-size="10" font-family="Space Grotesk">'+label+'</text>';
+  }
+
+  // Volume bars
+  for (var i=0; i<n; i++) {
+    var x=sx(i);
+    var color=(candles.c[i]>=candles.o[i])?'rgba(0,229,160,0.35)':'rgba(247,79,79,0.35)';
+    var vh=(candles.v[i]/maxV)*volMaxH;
+    out += '<rect x="'+(x-barW/2)+'" y="'+(H-BPAD/2-vh)+'" width="'+barW+'" height="'+vh+'" fill="'+color+'" rx="1"/>';
+  }
+
+  // Candles
+  for (var i=0; i<n; i++) {
+    var x=sx(i);
+    var green=candles.c[i]>=candles.o[i];
+    var col=green?'#00E5A0':'#F74F4F';
+    var bodyTop=Math.min(sy(candles.o[i]),sy(candles.c[i]));
+    var bodyBot=Math.max(sy(candles.o[i]),sy(candles.c[i]));
+    var bh=Math.max(1, bodyBot-bodyTop);
+    out += '<line x1="'+x+'" y1="'+sy(candles.h[i])+'" x2="'+x+'" y2="'+sy(candles.l[i])+'" stroke="'+col+'" stroke-width="1"/>';
+    out += '<rect x="'+(x-barW/2)+'" y="'+bodyTop+'" width="'+barW+'" height="'+bh+'" fill="'+col+'"/>';
+  }
+
+  svg.innerHTML = out;
+
+  // Update price display
+  var last = candles.c[candles.c.length-1];
+  var prev = candles.c.length > 1 ? candles.c[candles.c.length-2] : candles.o[candles.c.length-1];
+  var chg = last - prev;
+  var chgPct = prev ? chg/prev*100 : 0;
+  var isJpy = _chartSymbol.endsWith('.T');
+  var priceEl = document.getElementById('chart-price');
+  var pctEl = priceEl ? priceEl.nextElementSibling : null;
+  if (priceEl) { priceEl.textContent = isJpy ? '¥'+Math.round(last).toLocaleString() : '$'+last.toFixed(2); }
+  if (pctEl) {
+    pctEl.textContent = (chgPct>=0?'+':'')+chgPct.toFixed(2)+'%';
+    pctEl.style.color = pctColor(chgPct);
+  }
+}
+
+// ── チャート読み込み ───────────────────────────────────────
+function loadChart(symbol, resolution) {
+  symbol = symbol || _chartSymbol;
+  resolution = resolution || _chartResolution;
+  _chartSymbol = symbol;
+  _chartResolution = resolution;
+
+  var svg = document.getElementById('main-chart');
+  if (svg) svg.innerHTML = '<text x="430" y="140" fill="#3a4560" font-size="13" font-family="Space Grotesk" text-anchor="middle">読み込み中...</text>';
+
+  edgeFetch({ action:'candles', symbol:symbol, resolution:resolution }).then(function(d) {
+    if (d && d.candles) {
+      renderCandleChart(d.candles);
+    } else {
+      if (svg) svg.innerHTML = '<text x="430" y="140" fill="#f74f4f" font-size="13" font-family="Space Grotesk" text-anchor="middle">データ取得できませんでした（Finnhub制限の可能性）</text>';
+    }
+  }).catch(function() {
+    if (svg) svg.innerHTML = '<text x="430" y="140" fill="#f74f4f" font-size="13" font-family="Space Grotesk" text-anchor="middle">エラー</text>';
+  });
+}
+
+// ── チャートのタイムフレーム変更（上書き）─────────────────
+window.setTimeframe = function(tf, btn) {
+  document.querySelectorAll('#screen-chart .chart-btn').forEach(function(b) {
+    if (['1m','5m','1d','1w','1mo'].some(function(x){ return b.id==='tf-'+x; })) b.classList.remove('active');
+  });
+  btn.classList.add('active');
+
+  var resMap = { '1m':'1', '5m':'5', '1d':'D', '1w':'W', '1mo':'M' };
+  loadChart(_chartSymbol, resMap[tf] || 'D');
+};
+
+// ── チャートの銘柄変更（上書き）──────────────────────────
+var _chartMeta = {
+  'NVDA':  { name:'NVIDIA',      prefix:'$' },
+  '8035':  { name:'東京エレクトロン', prefix:'¥', sym:'8035.T' },
+  '7203':  { name:'トヨタ自動車',  prefix:'¥', sym:'7203.T' },
+};
+window.setChartTicker = function(code, btn) {
+  document.querySelectorAll('#screen-chart .chart-btn[onclick*="setChartTicker"]').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  var meta = _chartMeta[code] || {};
+  var sym = meta.sym || code;
+  document.getElementById('chart-ticker').textContent = (meta.name || code) + ' (' + code + ')';
+  loadChart(sym, _chartResolution);
+};
+
+// ── 個別株クイック選択（上書き）──────────────────────────
+var _stockMeta = {
+  '8035': { name:'東京エレクトロン', code:'8035', market:'東証プライム / 半導体', sym:'8035.T', jpy:true },
+  'NVDA':  { name:'NVIDIA',      code:'NVDA', market:'NASDAQ / 半導体',   sym:'NVDA',   jpy:false },
+  '7203': { name:'トヨタ自動車',  code:'7203', market:'東証プライム / 自動車', sym:'7203.T', jpy:true },
+  '6758': { name:'ソニーグループ', code:'6758', market:'東証プライム / 電機',  sym:'6758.T', jpy:true },
+};
+window.setStockQuick = function(code, btn) {
+  document.querySelectorAll('#screen-stock .chart-btn[onclick*="setStockQuick"]').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  loadStockQuote(code);
+};
+
+function loadStockQuote(code) {
+  var meta = _stockMeta[code] || { name:code, code:code, market:'', sym: code.length===4 ? code+'.T' : code, jpy: code.length===4 };
+  _stockSymbol = meta.sym;
+
+  document.getElementById('stock-code').textContent = meta.code + (meta.market ? ' / '+meta.market : '');
+  document.getElementById('stock-name').textContent = meta.name;
+  document.getElementById('stock-price').textContent = '取得中...';
+  document.getElementById('stock-change').textContent = '...';
+
+  // Quote
+  edgeFetch({ action:'quote', symbol:meta.sym }).then(function(d) {
+    if (!d || !d.quote) return;
+    var q = d.quote;
+    var p = meta.jpy ? '¥'+Math.round(q.price).toLocaleString() : '$'+q.price.toFixed(2);
+    document.getElementById('stock-price').textContent = p;
+    var chgStr = (q.changePercent>=0?'+':'')+q.changePercent.toFixed(2)+'%';
+    if (q.change != null) {
+      var arrow = q.change >= 0 ? '▲' : '▼';
+      var diff = meta.jpy ? Math.round(Math.abs(q.change)).toLocaleString() : Math.abs(q.change).toFixed(2);
+      chgStr += ' '+arrow+(meta.jpy ? '¥' : '$')+diff;
+    }
+    var chgEl = document.getElementById('stock-change');
+    chgEl.textContent = chgStr;
+    chgEl.style.color = q.changePercent >= 0 ? 'var(--c-accent)' : 'var(--c-red)';
+  }).catch(function(){});
+
+  // News
+  loadStockNews(meta.sym);
+}
+
+function loadStockNews(sym) {
+  var newsEl = document.querySelector('#screen-stock .card:last-of-type > div:last-child');
+  edgeFetch({ action:'news', symbol:sym }).then(function(d) {
+    if (!d || !d.news || !d.news.length) return;
+    var html = '';
+    d.news.forEach(function(n, i) {
+      var dt = n.datetime ? new Date(n.datetime*1000).toLocaleDateString('ja-JP',{month:'numeric',day:'numeric'}) : '';
+      html += '<div style="display:flex; gap:12px; align-items:flex-start; padding:12px 0; '+(i>0?'border-top:1px solid var(--c-border);':'')+'">'+
+        '<span class="pill pill-blue" style="white-space:nowrap;">'+n.source+'</span>'+
+        '<div style="flex:1;"><a href="'+n.url+'" target="_blank" style="font-size:13px; font-weight:600; color:var(--c-text); text-decoration:none;">'+n.headline+'</a>'+
+        (n.summary ? '<div style="font-size:12px; color:var(--c-muted); margin-top:3px;">'+n.summary.slice(0,100)+'...</div>' : '')+
+        '</div><div style="font-size:11px; color:var(--c-dim); white-space:nowrap;">'+dt+'</div></div>';
+    });
+    var card = document.querySelector('#screen-stock .card:last-of-type');
+    if (card) {
+      var content = card.querySelector('.card-content') || card.querySelector('div:last-child');
+      if (content) content.innerHTML = html;
+    }
+  }).catch(function(){});
+}
+
+// ── ボロ株スクリーナー ────────────────────────────────────
+function loadBoroScreen() {
+  var listEl = document.getElementById('boro-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-muted);font-size:14px;">読み込み中...</div>';
+
+  var codes = _boroCustom.map(function(s){ return s.code; }).join(',');
+  var params = { action:'boro-screen' };
+  if (codes) params.codes = codes;
+
+  edgeFetch(params).then(function(d) {
+    if (!d || !d.stocks) {
+      listEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-muted);">データ取得失敗</div>';
+      return;
+    }
+    _boroData = d.stocks;
+    renderBoroList();
+  }).catch(function() {
+    listEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-red);">エラー発生</div>';
+  });
+}
+
+function renderBoroList() {
+  var listEl = document.getElementById('boro-list');
+  if (!listEl || !_boroData.length) {
+    if (listEl) listEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:200px;color:var(--c-muted);">データなし（Finnhub TSEデータ制限の可能性）</div>';
+    return;
+  }
+
+  var sorted = _boroData.slice().sort(function(a, b) {
+    if (_boroSortKey === 'change') return (b.quote.changePercent||0) - (a.quote.changePercent||0);
+    if (_boroSortKey === 'price') return (a.quote.price||0) - (b.quote.price||0);
+    return 0;
+  });
+
+  var html = '';
+  sorted.forEach(function(s) {
+    var q = s.quote;
+    var chgPct = q.changePercent;
+    var col = chgPct >= 0 ? 'var(--c-accent)' : 'var(--c-red)';
+    var arrow = chgPct >= 0 ? '▲' : '▼';
+    var pStr = q.price < 100 ? q.price.toFixed(1) : Math.round(q.price).toLocaleString();
+    var highlight = q.price < 500 ? 'background:rgba(0,229,160,0.03);' : '';
+    html += '<div style="display:grid; grid-template-columns:60px 1fr 100px 90px 90px 80px; gap:0; padding:10px 16px; border-bottom:1px solid var(--c-border); align-items:center; cursor:pointer; '+highlight+'" onclick="boroSelectStock(\''+s.code+'\',\''+s.name+'\')" onmouseover="this.style.background=\'rgba(255,255,255,0.03)\'" onmouseout="this.style.background=\'\'">';
+    html += '<div style="font-family:var(--f-en); font-size:12px; color:var(--c-muted);">'+s.code+'</div>';
+    html += '<div style="font-size:13px; font-weight:500; color:var(--c-text);">'+s.name+'<br><span style="font-size:10px;color:var(--c-dim);">'+(q.price<100?'超低位株':q.price<500?'低位株':'中位株')+'</span></div>';
+    html += '<div style="text-align:right; font-family:var(--f-en); font-size:14px; font-weight:600; color:var(--c-text);">¥'+pStr+'</div>';
+    html += '<div style="text-align:right; font-family:var(--f-en); font-size:13px; color:'+col+';">'+(q.change>=0?'+':'')+q.change.toFixed(1)+'</div>';
+    html += '<div style="text-align:right; font-family:var(--f-en); font-size:13px; font-weight:700; color:'+col+';">'+arrow+(chgPct>=0?'+':'')+chgPct.toFixed(2)+'%</div>';
+    html += '<div style="text-align:right; font-size:11px; color:var(--c-muted);">¥'+Math.round(q.high)+'<br>¥'+Math.round(q.low)+'</div>';
+    html += '</div>';
+  });
+  listEl.innerHTML = html || '<div style="padding:24px; color:var(--c-muted); text-align:center;">有効なデータなし</div>';
+}
+
+function boroSelectStock(code, name) {
+  // チャート画面にジャンプして銘柄を表示
+  var chartNav = document.querySelector('[data-screen="chart"]');
+  if (chartNav) { navigate('chart', chartNav); }
+  _chartMeta[code] = { name:name, sym:code+'.T' };
+  document.getElementById('chart-ticker').textContent = name + ' (' + code + ')';
+  loadChart(code + '.T', 'D');
+}
+
+function boroSort(key, btn) {
+  _boroSortKey = key;
+  document.querySelectorAll('#screen-boro .chart-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderBoroList();
+}
+
+function boroAddStock() {
+  var code = (document.getElementById('boro-add-code').value || '').trim();
+  var name = (document.getElementById('boro-add-name').value || '').trim() || code;
+  if (!code) return;
+  if (!_boroCustom.find(function(s){ return s.code===code; })) {
+    _boroCustom.push({ code:code, name:name });
+    localStorage.setItem('boro_custom', JSON.stringify(_boroCustom));
+  }
+  document.getElementById('boro-add-code').value = '';
+  document.getElementById('boro-add-name').value = '';
+  loadBoroScreen();
+}
+
+function boroClearCustom() {
+  _boroCustom = [];
+  localStorage.removeItem('boro_custom');
+  loadBoroScreen();
+}
+
+// ── navigate をボロ株対応に拡張（上書き）─────────────────
+var _origNavigate = window.navigate;
+window.navigate = function(screen, el, isMob) {
+  if (_origNavigate) _origNavigate(screen, el, isMob);
+  if (screen === 'boro') {
+    loadBoroScreen();
+  }
+  if (screen === 'chart') {
+    // チャート画面が開かれたとき初回データ読み込み
+    if (!window._chartLoaded) {
+      window._chartLoaded = true;
+      loadChart('NVDA', 'D');
+    }
+  }
+};
+
+// ── 初期化 ────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // デフォルトの銘柄でstock画面クオートは8035
+  // チャートはクリック時に読み込む（パフォーマンス優先）
+});
 </script>
 </body>
 </html>
