@@ -1066,23 +1066,21 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       <div class="grid-2">
         <!-- Screener -->
         <div class="card">
-          <div class="card-title">投信スクリーナー</div>
+          <div class="card-title">投信スクリーナー <span style="font-size:11px;color:var(--c-muted);font-weight:400;">全20本</span></div>
           <div style="display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="chart-btn active">全て</button>
-              <button class="chart-btn">NISA対応</button>
-              <button class="chart-btn">低コスト(≤0.1%)</button>
-              <button class="chart-btn">再投資型</button>
-              <button class="chart-btn">蛸足なし</button>
+              <button class="chart-btn active" onclick="filterFundScreener('all',this)">全て</button>
+              <button class="chart-btn" onclick="filterFundScreener('nisa',this)">NISA対応</button>
+              <button class="chart-btn" onclick="filterFundScreener('low',this)">低コスト(≤0.1%)</button>
+              <button class="chart-btn" onclick="filterFundScreener('reinvest',this)">再投資型</button>
+              <button class="chart-btn" onclick="filterFundScreener('safe',this)">蛸足なし</button>
+              <button class="chart-btn" onclick="filterFundScreener('index',this)">インデックス</button>
+              <button class="chart-btn" onclick="filterFundScreener('theme',this)">テーマ</button>
             </div>
             <table class="data-table">
-              <thead><tr><th>ファンド名</th><th>手数料</th><th>NISA</th><th>配当</th><th>蛸足</th></tr></thead>
-              <tbody>
-                <tr><td><div style="font-weight:600; font-size:12px;">eMAXIS Slim 全世界</div><div style="color:var(--c-muted); font-size:11px;">インデックス・再投資</div></td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:12px;">0.057%</td><td><span class="pill pill-green">○</span></td><td style="color:var(--c-muted); font-size:12px;">なし</td><td><span class="pill pill-green">安全</span></td></tr>
-                <tr><td><div style="font-weight:600; font-size:12px;">eMAXIS Slim S&amp;P500</div><div style="color:var(--c-muted); font-size:11px;">インデックス・再投資</div></td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:12px;">0.093%</td><td><span class="pill pill-green">○</span></td><td style="color:var(--c-muted); font-size:12px;">なし</td><td><span class="pill pill-green">安全</span></td></tr>
-                <tr><td><div style="font-weight:600; font-size:12px;">ひふみプラス</div><div style="color:var(--c-muted); font-size:11px;">アクティブ・国内</div></td><td style="color:var(--c-yellow); font-family:var(--f-en); font-size:12px;">1.078%</td><td><span class="pill pill-green">○</span></td><td style="color:var(--c-yellow); font-size:12px;">2.4%</td><td><span class="pill pill-green">安全</span></td></tr>
-                <tr><td><div style="font-weight:600; font-size:12px;">グローバルAIファンド</div><div style="color:var(--c-muted); font-size:11px;">テーマ・毎月分配</div></td><td style="color:var(--c-red); font-family:var(--f-en); font-size:12px;">1.925%</td><td><span class="pill pill-red">✕</span></td><td style="color:var(--c-yellow); font-size:12px;">8.2%</td><td><span class="pill pill-red">⚠蛸足</span></td></tr>
-                <tr><td><div style="font-weight:600; font-size:12px;">楽天 S&amp;P500</div><div style="color:var(--c-muted); font-size:11px;">インデックス・再投資</div></td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:12px;">0.077%</td><td><span class="pill pill-green">○</span></td><td style="color:var(--c-muted); font-size:12px;">なし</td><td><span class="pill pill-green">安全</span></td></tr>
+              <thead><tr><th>ファンド名</th><th>手数料</th><th>1年</th><th>純資産</th><th>NISA</th><th>蛸足</th></tr></thead>
+              <tbody id="funds-screener-tbody">
+                <tr><td colspan="6" style="text-align:center;color:var(--c-muted);padding:20px;">読み込み中...</td></tr>
               </tbody>
             </table>
           </div>
@@ -1115,9 +1113,19 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
               <div style="font-size:12px; color:var(--c-muted); margin-bottom:6px;">ファンド</div>
               <select id="fund-select" style="width:100%; font-size:12px;" onchange="calcFund()">
                 <option value="0.07,0.00057">eMAXIS Slim 全世界（年利7%）</option>
-                <option value="0.09,0.00093">eMAXIS Slim S&P500（年利9%）</option>
+                <option value="0.09,0.00077">eMAXIS Slim S&amp;P500（年利9%）</option>
+                <option value="0.09,0.00077">楽天・S&amp;P500（年利9%）</option>
+                <option value="0.09,0.00093">SBI・V・S&amp;P500（年利9%）</option>
+                <option value="0.07,0.00093">eMAXIS Slim 先進国株式（年利7%）</option>
+                <option value="0.07,0.00093">ニッセイ外国株式（年利7%）</option>
+                <option value="0.07,0.00132">楽天・全世界株式（年利7%）</option>
+                <option value="0.09,0.00093">SBI・V・全米株式（年利9%）</option>
+                <option value="0.10,0.00440">インド株式インデックス（年利10%）</option>
+                <option value="0.12,0.00880">半導体セクターF（年利12%）</option>
                 <option value="0.08,0.01078">ひふみプラス（年利8%）</option>
                 <option value="0.10,0.01925">グローバルAIファンド（年利10%）</option>
+                <option value="0.08,0.00990">AIメガトレンドF（年利8%）</option>
+                <option value="0.06,0.00480">日本高配当株式F（年利6%）</option>
               </select>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
@@ -1137,9 +1145,26 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
                 <div style="font-size:11px; color:var(--c-muted); margin-top:3px;" id="fund-5y-gain">—</div>
               </div>
             </div>
-            <div style="background:rgba(247,195,79,0.06); border:1px solid rgba(247,195,79,0.2); border-radius:8px; padding:10px;">
-              <div style="font-size:11px; color:var(--c-yellow); font-weight:700; margin-bottom:4px;">💡 最適注文タイミング</div>
-              <div style="font-size:12px; color:var(--c-muted); line-height:1.6;">決算日<strong style="color:var(--c-text);">2営業日前</strong>まで購入で分配金受取可能 ／ 月初<strong style="color:var(--c-text);">1〜3日</strong>は基準価額上昇しやすい</div>
+            <div style="background:rgba(247,195,79,0.06); border:1px solid rgba(247,195,79,0.2); border-radius:8px; padding:12px;">
+              <div style="font-size:12px; color:var(--c-yellow); font-weight:700; margin-bottom:8px;">📅 注文タイミングガイド</div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:11px; color:var(--c-accent); font-weight:700; min-width:60px;">月末注文</span>
+                  <span style="font-size:11px; color:var(--c-muted); line-height:1.5;">翌営業日が基準日。月末ドルコスト平均が基本戦略。</span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:11px; color:var(--c-yellow); font-weight:700; min-width:60px;">決算前2日</span>
+                  <span style="font-size:11px; color:var(--c-muted); line-height:1.5;">分配型：決算日2営業日前までに購入で分配金受取可。ただし<strong style="color:var(--c-red);">蛸足に注意</strong>。</span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:11px; color:var(--c-blue); font-weight:700; min-width:60px;">米国安値後</span>
+                  <span style="font-size:11px; color:var(--c-muted); line-height:1.5;">米国株下落翌日の午前中注文が割安。S&amp;P500連動は米時間外も反映。</span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                  <span style="font-size:11px; color:var(--c-muted); font-weight:700; min-width:60px;">避けるべき</span>
+                  <span style="font-size:11px; color:var(--c-muted); line-height:1.5;">決算当日・年末年始・VIX30超の急騰局面での追いかけ買い。</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1554,7 +1579,7 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       <!-- 注意書き -->
       <div style="font-size:11px; color:var(--c-dim); padding:8px 4px; line-height:1.6;">
         ※ ボロ株は価格変動リスクが非常に高く、流動性リスクも伴います。本情報は投資判断の参考であり、投資助言ではありません。<br>
-        ※ Finnhub 無料プランの場合、一部日本株データが取得できない場合があります（TSEデータ制限）。
+        ※ データは Yahoo Finance 経由のリアルタイム価格です。市場時間外は前日終値が表示されます。
       </div>
     </div>
 
@@ -1571,56 +1596,36 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
         </div>
       </div>
 
-      <div class="grid-2">
-        <!-- Edge Function 接続テスト -->
-        <div class="card">
-          <div class="card-title" style="font-size:13px; margin-bottom:8px;">🔌 Edge Function 接続テスト</div>
-          <div style="font-size:12px; color:var(--c-muted); margin-bottom:14px; line-height:1.6;">
-            このアプリは <strong style="color:var(--c-accent);">verify_jwt=false</strong> の Edge Function を直接呼び出しているため、<br>
-            Supabase URLやAnon Keyの入力は不要です。
-          </div>
-          <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px; margin-bottom:10px;">
-            <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">Edge Function URL</div>
-            <div style="font-size:12px; color:var(--c-accent); font-family:var(--f-en); word-break:break-all;">https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data</div>
-          </div>
-          <input type="hidden" id="sb-url" value="https://xyylcetlturlcdpouhaj.supabase.co">
-          <input type="hidden" id="sb-anon-key" value="">
-          <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveSupabaseConfig()">
-            接続テスト（Edge Function に疎通確認）
-          </button>
-          <div id="sb-test-result" style="font-size:12px; color:var(--c-muted); margin-top:8px;"></div>
+      <!-- Edge Function 接続テスト -->
+      <div class="card">
+        <div class="card-title" style="font-size:13px; margin-bottom:8px;">🔌 Edge Function 接続テスト</div>
+        <div style="font-size:12px; color:var(--c-muted); margin-bottom:14px; line-height:1.6;">
+          このアプリは <strong style="color:var(--c-accent);">Supabase Edge Function</strong> 経由で Yahoo Finance のデータを取得します。<br>
+          APIキー・Anon Keyは一切不要です。以下のURLに直接アクセスします。
         </div>
-
-        <!-- API キー確認 -->
-        <div class="card">
-          <div class="card-title" style="font-size:13px; margin-bottom:16px;">🔑 APIキー状態（Supabase Secretsに保存済みか確認）</div>
-          <div style="display:flex; flex-direction:column; gap:10px;">
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--c-bg); border-radius:8px;">
-              <div>
-                <div style="font-size:13px; font-weight:600; color:var(--c-text);">Finnhub</div>
-                <div style="font-size:11px; color:var(--c-muted);">米国株・為替・ニュース（無料 60req/分）</div>
-              </div>
-              <div id="finnhub-status" class="pill pill-gray" style="font-size:10px;">未確認</div>
-            </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--c-bg); border-radius:8px;">
-              <div>
-                <div style="font-size:13px; font-weight:600; color:var(--c-text);">Alpha Vantage</div>
-                <div style="font-size:11px; color:var(--c-muted);">テクニカル指標（無料 25req/日）</div>
-              </div>
-              <div id="av-status" class="pill pill-gray" style="font-size:10px;">未確認</div>
-            </div>
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:var(--c-bg); border-radius:8px;">
-              <div>
-                <div style="font-size:13px; font-weight:600; color:var(--c-text);">J-Quants</div>
-                <div style="font-size:11px; color:var(--c-muted);">日本株（無料=12週遅延 / Light=¥2,000/月）</div>
-              </div>
-              <div id="jquants-status" class="pill pill-gray" style="font-size:10px;">未確認</div>
-            </div>
-            <button class="btn" style="width:100%; justify-content:center; font-size:12px;" onclick="testAllAPIs()">
-              全APIを接続テスト
-            </button>
+        <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+          <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">Edge Function URL（Yahoo Finance プロキシ）</div>
+          <div style="font-size:12px; color:var(--c-accent); font-family:var(--f-en); word-break:break-all;">https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data</div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;">
+          <div style="background:var(--c-bg); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">対応データ</div>
+            <div style="font-size:12px; color:var(--c-text); font-weight:600;">日本株・米国株</div>
+          </div>
+          <div style="background:var(--c-bg); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">為替・指数</div>
+            <div style="font-size:12px; color:var(--c-text); font-weight:600;">USD/JPY・VIX・金</div>
+          </div>
+          <div style="background:var(--c-bg); border-radius:8px; padding:10px; text-align:center;">
+            <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">チャート</div>
+            <div style="font-size:12px; color:var(--c-text); font-weight:600;">OHLCV・ローソク足</div>
           </div>
         </div>
+        <input type="hidden" id="sb-url" value="https://xyylcetlturlcdpouhaj.supabase.co">
+        <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveSupabaseConfig()">
+          接続テスト実行
+        </button>
+        <div id="sb-test-result" style="font-size:12px; color:var(--c-muted); margin-top:8px;"></div>
       </div>
 
       <!-- ライブデータプレビュー -->
@@ -1638,59 +1643,6 @@ APIを設定して「接続テスト」を実行してください
         </div>
       </div>
 
-      <!-- セットアップガイド -->
-      <div class="card">
-        <div class="card-title">📋 セットアップ手順</div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,229,160,0.15); border:1px solid var(--c-accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--c-accent); flex-shrink:0;">1</div>
-            <div>
-              <div style="font-size:13px; font-weight:600; color:var(--c-text);">Supabase Secretsに APIキーを登録</div>
-              <div style="font-size:12px; color:var(--c-muted); margin-top:3px; line-height:1.6;">SupabaseダッシュボードでEdge Functions → Secrets → FINNHUB_API_KEY / ALPHA_VANTAGE_KEY / JQUANTS_API_KEY を追加</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,229,160,0.15); border:1px solid var(--c-accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--c-accent); flex-shrink:0;">2</div>
-            <div>
-              <div style="font-size:13px; font-weight:600; color:var(--c-text);">GitHub SecretsにSupabase情報を登録</div>
-              <div style="font-size:12px; color:var(--c-muted); margin-top:3px; line-height:1.6;">GitHub → Settings → Secrets → SUPABASE_PROJECT_REF / SUPABASE_ACCESS_TOKEN を追加</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,229,160,0.15); border:1px solid var(--c-accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--c-accent); flex-shrink:0;">3</div>
-            <div>
-              <div style="font-size:13px; font-weight:600; color:var(--c-text);">GitHubにpush → 自動デプロイ</div>
-              <div style="font-size:12px; color:var(--c-muted); margin-top:3px; line-height:1.6; font-family:var(--f-en);">git push origin main → GitHub Actionsが自動でEdge Functionをデプロイ</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <div style="width:24px; height:24px; border-radius:50%; background:rgba(0,229,160,0.15); border:1px solid var(--c-accent); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--c-accent); flex-shrink:0;">4</div>
-            <div>
-              <div style="font-size:13px; font-weight:600; color:var(--c-text);">このページでSupabase URLを設定</div>
-              <div style="font-size:12px; color:var(--c-muted); margin-top:3px; line-height:1.6;">上の入力欄にProject URLとAnon Keyを入力 → 「接続テスト&保存」をクリック</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 登録リンク -->
-      <div class="grid-3" style="gap:10px;">
-        <div class="card" style="padding:14px 16px;">
-          <div style="font-size:13px; font-weight:700; color:var(--c-text); margin-bottom:4px;">Finnhub</div>
-          <div style="font-size:11px; color:var(--c-muted); margin-bottom:8px;">米国株リアルタイム・ニュース・為替<br>無料: 60req/分</div>
-          <div style="font-family:var(--f-en); font-size:11px; color:var(--c-accent);">finnhub.io</div>
-        </div>
-        <div class="card" style="padding:14px 16px;">
-          <div style="font-size:13px; font-weight:700; color:var(--c-text); margin-bottom:4px;">Alpha Vantage</div>
-          <div style="font-size:11px; color:var(--c-muted); margin-bottom:8px;">テクニカル指標（RSI・MACD等）<br>無料: 25req/日</div>
-          <div style="font-family:var(--f-en); font-size:11px; color:var(--c-accent);">alphavantage.co</div>
-        </div>
-        <div class="card" style="padding:14px 16px;">
-          <div style="font-size:13px; font-weight:700; color:var(--c-text); margin-bottom:4px;">J-Quants（JPX公式）</div>
-          <div style="font-size:11px; color:var(--c-muted); margin-bottom:8px;">日本株データ<br>無料=12週遅延 / Light=¥2,000/月</div>
-          <div style="font-family:var(--f-en); font-size:11px; color:var(--c-accent);">jpx-jquants.com</div>
-        </div>
-      </div>
     </div>
   </div><!-- /content -->
 </div><!-- /main -->
@@ -1804,6 +1756,8 @@ function navigate(screen, navEl, fromMob) {
   if (screen === 'boro') loadBoroScreen();
   if (screen === 'portfolio') renderPortfolio();
   if (screen === 'stock' && !window._stockInited) { window._stockInited = true; loadStockQuote('8035'); }
+  if (screen === 'funds') initFundScreener();
+  if (screen === 'fund-ranking' && !window._frInited) { window._frInited = true; showFundRank('fee', $('fr-tab-fee')); }
   if (screen === 'api-settings') refreshApiStatus();
 }
 window.navigate = navigate;
@@ -1854,10 +1808,10 @@ window.togglePeriod = togglePeriod;
 window.filterSector = filterSector;
 
 /* ═══════════════════════════════════════════════════════════════════════
-   4. マーケットデータ自動取得 (USD/JPY, VIX, NVDA)
+   4. マーケットデータ自動取得 (全6指標: 日経/TOPIX/SP500/金/USD/VIX)
    ═══════════════════════════════════════════════════════════════════════ */
 function statCard(label) {
-  const cards = document.querySelectorAll('.stat-card');
+  const cards = document.querySelectorAll('#screen-heatmap .stat-card');
   for (const c of cards) {
     const l = c.querySelector('.stat-label');
     if (l && l.textContent.trim() === label) return c;
@@ -1865,9 +1819,65 @@ function statCard(label) {
   return null;
 }
 
+function updateStatCard(c, valueText, changePct, changeText) {
+  if (!c) return;
+  const vEl = c.querySelector('.stat-value');
+  const chEl = c.querySelector('.stat-change');
+  if (vEl) vEl.textContent = valueText;
+  if (chEl) {
+    if (changeText) {
+      chEl.textContent = changeText;
+    } else if (changePct != null) {
+      const sign = changePct >= 0 ? '+' : '';
+      chEl.textContent = sign + changePct.toFixed(2) + '%';
+    }
+    if (changePct != null) chEl.style.color = pctColor(changePct);
+  }
+}
+
 async function loadMarketData() {
-  const d = await edgeFetch({ action: 'market-data' });
+  const [d, nk, tx, sp, gd] = await Promise.all([
+    edgeFetch({ action: 'market-data' }),
+    edgeFetch({ action: 'quote', symbol: '^N225' }),
+    edgeFetch({ action: 'quote', symbol: '^TPX' }),
+    edgeFetch({ action: 'quote', symbol: '^GSPC' }),
+    edgeFetch({ action: 'quote', symbol: 'GC=F' })
+  ]);
+
+  // 日経平均 (JPY)
+  if (nk && nk.quote && nk.quote.price != null) {
+    const q = nk.quote;
+    updateStatCard(statCard('日経平均'),
+      '¥' + Math.round(q.price).toLocaleString('ja-JP'),
+      q.changePercent);
+  }
+
+  // TOPIX (JPY)
+  if (tx && tx.quote && tx.quote.price != null) {
+    const q = tx.quote;
+    updateStatCard(statCard('TOPIX'),
+      '¥' + Math.round(q.price).toLocaleString('ja-JP'),
+      q.changePercent);
+  }
+
+  // S&P 500 (USD index — show as number)
+  if (sp && sp.quote && sp.quote.price != null) {
+    const q = sp.quote;
+    updateStatCard(statCard('S&P 500'),
+      Math.round(q.price).toLocaleString(),
+      q.changePercent);
+  }
+
+  // 金 (XAU/USD)
+  if (gd && gd.quote && gd.quote.price != null) {
+    const q = gd.quote;
+    updateStatCard(statCard('金 (XAU)'),
+      '$' + Math.round(q.price).toLocaleString(),
+      q.changePercent);
+  }
+
   if (!d) return;
+
   // USD/JPY
   if (d.usd_jpy && d.usd_jpy.rate != null) {
     const c = statCard('USD/JPY');
@@ -1881,6 +1891,7 @@ async function loadMarketData() {
       }
     }
   }
+
   // VIX
   if (d.vix && d.vix.value != null) {
     const c = statCard('VIX');
@@ -1892,10 +1903,11 @@ async function loadMarketData() {
       if (ch) ch.textContent = d.vix.value >= 30 ? '高ボラ警戒' : d.vix.value >= 20 ? 'やや高め' : '低ボラ安定';
     }
   }
-  // NVDA → 急騰ランキングの3行目を更新
+
+  // NVDA in heatmap table
   if (d.nvda && d.nvda.price != null) {
-    const tr = document.querySelectorAll('#screen-heatmap .data-table tr');
-    tr.forEach(row => {
+    const trs = document.querySelectorAll('#screen-heatmap .data-table tr');
+    trs.forEach(row => {
       const nameCell = row.querySelector('td:first-child');
       if (nameCell && nameCell.textContent.includes('NVIDIA')) {
         const cells = row.querySelectorAll('td');
@@ -2461,73 +2473,75 @@ function makeRankRow(p, type, rank) {
   const r = { ...p, rank };
   // type別データ
   const seed = (p.code.charCodeAt(0) + rank) % 100;
+  const isJpy = p.market !== '米';
+  const fmtP = (v) => isJpy ? '¥' + Math.round(v).toLocaleString('ja-JP') : '$' + v.toFixed(2);
   if (type === 'rise') {
-    r.price = p.code === 'NVDA' ? '$912' : '¥'+(2000 + seed*120).toLocaleString();
+    r.price = fmtP(isJpy ? 2000 + seed*120 : 200 + seed*5);
     r.v1 = '+' + (8 - rank * 0.3 - (seed%5)*0.1).toFixed(2) + '%';
     r.v2 = (4 - rank*0.1 - (seed%3)*0.2).toFixed(1) + 'x';
     r.score = Math.max(50, 95 - rank*2 - (seed%5));
     r.verdict = r.score >= 80 ? '強買' : r.score >= 70 ? '買増' : r.score >= 60 ? '継続' : '様子見';
     r.vc = r.score >= 70 ? 'green' : r.score >= 50 ? 'yellow' : 'red';
   } else if (type === 'fall') {
-    r.price = '¥'+(800 + seed*80).toLocaleString();
+    r.price = fmtP(isJpy ? 800 + seed*80 : 50 + seed*3);
     r.v1 = '−' + (5 - rank * 0.2 - (seed%5)*0.1).toFixed(2) + '%';
     r.v2 = (2.5 - rank*0.1 + (seed%3)*0.2).toFixed(1) + 'x';
     r.score = Math.max(20, 60 - rank*2 - (seed%5));
     r.verdict = r.score <= 35 ? '売却' : r.score <= 50 ? '注視' : '様子見';
     r.vc = r.score <= 35 ? 'red' : r.score <= 50 ? 'yellow' : 'gray';
   } else if (type === 'cheap') {
-    const price = Math.round(150 + rank*60 + (seed%50)*5);
-    r.price = '¥' + price;
-    r.v1 = '¥' + price;
+    const price = isJpy ? Math.round(150 + rank*60 + (seed%50)*5) : parseFloat((10 + rank*4 + (seed%20)*0.5).toFixed(2));
+    r.price = fmtP(price);
+    r.v1 = r.price;
     r.v2 = ((seed%10)-5).toFixed(2) + '%';
     r.score = 30 + (seed%50);
     r.verdict = r.score >= 60 ? '継続' : r.score >= 40 ? '様子見' : '売却';
     r.vc = r.score >= 60 ? 'green' : r.score >= 40 ? 'yellow' : 'red';
   } else if (type === 'premium') {
-    const price = 10000 + rank*8000 + (seed%50)*500;
-    r.price = '¥' + price.toLocaleString();
-    r.v1 = '¥' + price.toLocaleString();
+    const price = isJpy ? 10000 + rank*8000 + (seed%50)*500 : 500 + rank*200 + (seed%50)*10;
+    r.price = fmtP(price);
+    r.v1 = r.price;
     r.v2 = '+' + (1 + (seed%30)*0.1).toFixed(2) + '%';
     r.score = 65 + (seed%30);
     r.verdict = r.score >= 80 ? '強買' : r.score >= 70 ? '継続' : '様子見';
     r.vc = r.score >= 70 ? 'green' : 'yellow';
   } else if (type === 'dividend') {
-    r.price = '¥'+(2000 + seed*100).toLocaleString();
+    r.price = fmtP(isJpy ? 2000 + seed*100 : 80 + seed*3);
     r.v1 = (6 - rank * 0.3 - (seed%5)*0.05).toFixed(2) + '%';
-    r.v2 = '¥' + (50 + rank*15 + (seed%10)*5);
+    r.v2 = (isJpy ? '¥' : '$') + (isJpy ? 50 + rank*15 + (seed%10)*5 : (2 + rank*0.5 + (seed%5)*0.1).toFixed(2));
     r.score = 50 + (seed%30);
     r.verdict = r.score >= 70 ? '継続' : '様子見';
     r.vc = r.score >= 70 ? 'green' : 'yellow';
   } else if (type === 'per') {
-    r.price = '¥'+(1500 + seed*200).toLocaleString();
+    r.price = fmtP(isJpy ? 1500 + seed*200 : 60 + seed*8);
     r.v1 = (4 + rank * 0.6 + (seed%5)*0.2).toFixed(1) + 'x';
     r.v2 = (0.4 + rank*0.1 + (seed%5)*0.1).toFixed(1) + 'x';
     r.score = 40 + (seed%40);
     r.verdict = r.score >= 70 ? '継続' : r.score >= 50 ? '様子見' : '売却';
     r.vc = r.score >= 70 ? 'green' : r.score >= 50 ? 'yellow' : 'red';
   } else if (type === 'roe') {
-    r.price = '¥'+(3000 + seed*200).toLocaleString();
+    r.price = fmtP(isJpy ? 3000 + seed*200 : 120 + seed*8);
     r.v1 = (50 - rank * 1.5 - (seed%5)*0.2).toFixed(1) + '%';
     r.v2 = (15 + rank*1.5 + (seed%5)*0.5).toFixed(1) + 'x';
     r.score = 70 + (seed%25);
     r.verdict = r.score >= 80 ? '強買' : '継続';
     r.vc = 'green';
   } else if (type === 'small') {
-    r.price = '¥'+(800 + seed*150).toLocaleString();
+    r.price = fmtP(isJpy ? 800 + seed*150 : 30 + seed*5);
     r.v1 = (300 + rank*200 + (seed%50)*30) + '億';
     r.v2 = '+' + (50 - rank*1.5 + (seed%10)*0.5).toFixed(1) + '%';
     r.score = 55 + (seed%30);
     r.verdict = r.score >= 70 ? '打診' : '様子見';
     r.vc = r.score >= 70 ? 'green' : 'yellow';
   } else if (type === 'ai') {
-    r.price = '¥'+(2000 + seed*200).toLocaleString();
+    r.price = fmtP(isJpy ? 2000 + seed*200 : 80 + seed*8);
     r.score = 95 - rank;
     r.v1 = String(r.score);
     r.v2 = '+' + (25 - rank*0.5 - (seed%5)) + '〜' + (40 - rank*0.5 + (seed%5)) + '%';
     r.verdict = r.score >= 85 ? '強買' : r.score >= 75 ? '買増' : '継続';
     r.vc = 'green';
   } else if (type === 'volume') {
-    r.price = '¥'+(1500 + seed*150).toLocaleString();
+    r.price = fmtP(isJpy ? 1500 + seed*150 : 60 + seed*5);
     r.v1 = (5 - rank*0.15 - (seed%5)*0.1).toFixed(1) + 'x';
     r.v2 = (((seed%2)?'+':'−') + (5 - rank*0.2 - (seed%5)*0.2).toFixed(2) + '%');
     r.score = 50 + (seed%40);
@@ -2782,8 +2796,59 @@ function updateFrSim(rate) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   10. 投信スクリーナー シミュ (heatmap側)
+   10. 投信スクリーナー (screen-funds) — 全20本 動的描画
    ═══════════════════════════════════════════════════════════════════════ */
+let _fsFilter = 'all';
+
+function filterFundScreener(type, btn) {
+  _fsFilter = type;
+  document.querySelectorAll('#screen-funds .chart-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderFundScreener();
+}
+window.filterFundScreener = filterFundScreener;
+
+function renderFundScreener() {
+  const tbody = $('funds-screener-tbody');
+  if (!tbody) return;
+  let pool = FUND_POOL.slice();
+  if (_fsFilter === 'nisa')    pool = pool.filter(f => f.nisa === '○');
+  if (_fsFilter === 'low')     pool = pool.filter(f => f.fee <= 0.1);
+  if (_fsFilter === 'reinvest') pool = pool.filter(f => f.divid === 0);
+  if (_fsFilter === 'safe')    pool = pool.filter(f => f.tako === '安全');
+  if (_fsFilter === 'index')   pool = pool.filter(f => f.cat === 'インデックス');
+  if (_fsFilter === 'theme')   pool = pool.filter(f => f.cat === 'テーマ');
+  tbody.innerHTML = '';
+  pool.forEach(f => {
+    const feeColor = f.fee <= 0.1 ? 'var(--c-accent)' : f.fee <= 0.5 ? 'var(--c-yellow)' : 'var(--c-red)';
+    const takoClass = f.tako === '安全' ? 'pill-green' : 'pill-red';
+    const nisaClass = f.nisa === '○' ? 'pill-green' : 'pill-red';
+    const assetsStr = f.assets >= 10000 ? (f.assets/10000).toFixed(1)+'兆' : (f.assets/100).toFixed(0)+'百億';
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => { if($('fund-select')) { [...$('fund-select').options].forEach((o,i) => { if(o.text.includes(f.name.slice(0,8))) $('fund-select').selectedIndex=i; }); calcFund(); } };
+    tr.innerHTML = `<td><div style="font-weight:600;font-size:12px;">${f.name}</div><div style="color:var(--c-muted);font-size:10px;">${f.cat} / 設定${f.est}</div></td>
+      <td style="font-family:var(--f-en);font-size:12px;font-weight:600;color:${feeColor};">${f.fee.toFixed(3)}%</td>
+      <td style="font-family:var(--f-en);font-size:12px;color:var(--c-accent);">+${f.ret1.toFixed(1)}%</td>
+      <td style="font-family:var(--f-en);font-size:11px;color:var(--c-muted);">${assetsStr}</td>
+      <td><span class="pill ${nisaClass}" style="font-size:10px;">${f.nisa}</span></td>
+      <td><span class="pill ${takoClass}" style="font-size:10px;">${f.tako}</span></td>`;
+    tbody.appendChild(tr);
+  });
+  if (pool.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--c-muted);padding:16px;">該当なし</td></tr>';
+  }
+}
+
+function initFundScreener() {
+  if (window._fundScreenerInited) return;
+  window._fundScreenerInited = true;
+  renderFundScreener();
+  calcFund();
+}
+window.initFundScreener = initFundScreener;
+
+/* ─── 積立シミュ (screen-funds) ─── */
 let fundMonthly = 3000 * 365 / 12;
 function setFundAmount(v, period, btn) {
   document.querySelectorAll('#screen-funds .sim-btn').forEach(b => b.classList.remove('active'));
@@ -3118,11 +3183,13 @@ document.addEventListener('DOMContentLoaded', function() {
   // ランキング初期表示
   showStockRank('rise', $('sr-tab-rise'));
   showFundRank('fee', $('fr-tab-fee'));
+  // 投信スクリーナー初期化
+  initFundScreener();
   // 投信シミュ
   calcFund();
   // ポートフォリオ
   renderPortfolio();
-  // マーケットデータ
+  // マーケットデータ（全6指標をリアルタイム取得）
   loadMarketData();
   // API設定の旧URL欄をクリア
   if ($('sb-url')) $('sb-url').value = 'https://xyylcetlturlcdpouhaj.supabase.co';
