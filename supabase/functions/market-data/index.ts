@@ -1,217 +1,85 @@
-// Stok Market Data Edge Function
-// Deploy: supabase functions deploy market-data
-
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const FINNHUB_KEY = Deno.env.get("FINNHUB_API_KEY") ?? "";
-const AV_KEY = Deno.env.get("ALPHA_VANTAGE_KEY") ?? "";
-const JQUANTS_KEY = Deno.env.get("JQUANTS_API_KEY") ?? "";
-
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+}
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+Deno.serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
-  const url = new URL(req.url);
-  const endpoint = url.searchParams.get("endpoint") ?? "";
-  const symbol = url.searchParams.get("symbol") ?? "";
-
   try {
-    let data: unknown;
+    const FINNHUB_KEY = Deno.env.get('FINNHUB_API_KEY')
+    const AV_KEY = Deno.env.get('ALPHA_VANTAGE_KEY')
 
-    switch (endpoint) {
+    if (!FINNHUB_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'FINNHUB_API_KEY is not set in Supabase Secrets' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-      // ── 米国株 クォート（リアルタイム） ──
-      case "us_quote": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
+    const [nvdaResult, forexResult, vixResult] = await Promise.allSettled([
+      fetch(`https://finnhub.io/api/v1/quote?symbol=NVDA&token=${FINNHUB_KEY}`),
+      fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:USD_JPY&token=${FINNHUB_KEY}`),
+      fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1m&range=1d', {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MarketDataBot/1.0)' },
+      }),
+    ])
+
+    let nvda = null, usdJpy = null, vix = null
+
+    if (nvdaResult.status === 'fulfilled' && nvdaResult.value.ok) {
+      const d = await nvdaResult.value.json()
+      if (d.c && d.c !== 0) nvda = { price: d.c, change: d.d, changePercent: d.dp, high: d.h, low: d.l, open: d.o, prevClose: d.pc }
+    }
+
+    if (forexResult.status === 'fulfilled' && forexResult.value.ok) {
+      const d = await forexResult.value.json()
+      if (d.c && d.c !== 0) usdJpy = { rate: d.c, change: d.d, changePercent: d.dp, high: d.h, low: d.l, prevClose: d.pc }
+    }
+
+    if (vixResult.status === 'fulfilled' && vixResult.value.ok) {
+      const d = await vixResult.value.json()
+      const meta = d?.chart?.result?.[0]?.meta
+      if (meta?.regularMarketPrice) {
+        const price = meta.regularMarketPrice
+        const prevClose = meta.chartPreviousClose ?? meta.previousClose ?? null
+        vix = { value: price, prevClose, change: prevClose !== null ? +(price - prevClose).toFixed(2) : null, changePercent: prevClose !== null ? +((((price - prevClose) / prevClose) * 100).toFixed(2)) : null }
       }
+    }
 
-      // ── 米国株 企業情報 ──
-      case "us_profile": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/stock/profile2?symbol=${symbol}&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
+    if (!nvda && AV_KEY) {
+      try {
+        const avRes = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=NVDA&apikey=${AV_KEY}`)
+        if (avRes.ok) {
+          const d = await avRes.json()
+          const q = d['Global Quote']
+          if (q?.['05. price']) nvda = { price: parseFloat(q['05. price']), change: parseFloat(q['09. change']), changePercent: parseFloat(q['10. change percent']), high: parseFloat(q['03. high']), low: parseFloat(q['04. low']), open: parseFloat(q['02. open']), prevClose: parseFloat(q['08. previous close']) }
+        }
+      } catch {}
+    }
 
-      // ── 米国株 キャンドルデータ（チャート用）──
-      case "us_candles": {
-        const resolution = url.searchParams.get("resolution") ?? "D";
-        const from = url.searchParams.get("from") ?? Math.floor(Date.now()/1000 - 86400*30).toString();
-        const to = url.searchParams.get("to") ?? Math.floor(Date.now()/1000).toString();
-        const r = await fetch(
-          `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=${resolution}&from=${from}&to=${to}&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      // ── 為替レート（USD/JPY等）──
-      case "forex": {
-        const fromC = url.searchParams.get("from") ?? "USD";
-        const toC = url.searchParams.get("to") ?? "JPY";
-        const r = await fetch(
-          `https://finnhub.io/api/v1/forex/rates?base=${fromC}&token=${FINNHUB_KEY}`
-        );
-        const json = await r.json() as { quote?: Record<string, number> };
-        data = {
-          rate: json?.quote?.[toC] ?? null,
-          from: fromC,
-          to: toC,
-          timestamp: Date.now(),
-        };
-        break;
-      }
-
-      // ── マーケットニュース ──
-      case "news": {
-        const category = url.searchParams.get("category") ?? "general";
-        const r = await fetch(
-          `https://finnhub.io/api/v1/news?category=${category}&token=${FINNHUB_KEY}`
-        );
-        const articles = await r.json() as Array<{
-          datetime: number; headline: string; summary: string; url: string; source: string;
-        }>;
-        // 最新10件のみ返す
-        data = Array.isArray(articles) ? articles.slice(0, 10) : [];
-        break;
-      }
-
-      // ── 企業ニュース（個別株）──
-      case "company_news": {
-        const from = url.searchParams.get("from") ?? new Date(Date.now() - 7*86400000).toISOString().split("T")[0];
-        const to = url.searchParams.get("to") ?? new Date().toISOString().split("T")[0];
-        const r = await fetch(
-          `https://finnhub.io/api/v1/company-news?symbol=${symbol}&from=${from}&to=${to}&token=${FINNHUB_KEY}`
-        );
-        const articles = await r.json() as Array<unknown>;
-        data = Array.isArray(articles) ? articles.slice(0, 8) : [];
-        break;
-      }
-
-      // ── 推薦トレンド（Buy/Sell/Hold比率）──
-      case "recommendation": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&token=${FINNHUB_KEY}`
-        );
-        const arr = await r.json() as Array<unknown>;
-        data = Array.isArray(arr) ? arr.slice(0, 3) : [];
-        break;
-      }
-
-      // ── 決算サプライズ履歴 ──
-      case "earnings": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/stock/earnings?symbol=${symbol}&limit=4&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      // ── テクニカル指標（RSI等）- Alpha Vantage ──
-      case "rsi": {
-        const interval = url.searchParams.get("interval") ?? "daily";
-        const r = await fetch(
-          `https://www.alphavantage.co/query?function=RSI&symbol=${symbol}&interval=${interval}&time_period=14&series_type=close&apikey=${AV_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      // ── 日本株 株価（J-Quants）── 
-      case "jp_quote": {
-        // J-Quants V2: 日足データ
-        const r = await fetch(
-          `https://api.jquants.com/v1/prices/daily_quotes?code=${symbol}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${JQUANTS_KEY}`,
-            },
-          }
-        );
-        const json = await r.json() as { daily_quotes?: unknown[] };
-        // 最新データを返す
-        const quotes = json?.daily_quotes ?? [];
-        data = Array.isArray(quotes) ? quotes.slice(-5) : quotes;
-        break;
-      }
-
-      // ── 日本株 財務情報（J-Quants）──
-      case "jp_financial": {
-        const r = await fetch(
-          `https://api.jquants.com/v1/fins/statements?code=${symbol}`,
-          {
-            headers: {
-              "Authorization": `Bearer ${JQUANTS_KEY}`,
-            },
-          }
-        );
-        const json = await r.json() as { statements?: unknown[] };
-        const stmts = json?.statements ?? [];
-        data = Array.isArray(stmts) ? stmts.slice(-4) : stmts;
-        break;
-      }
-
-      // ── セクター別パフォーマンス（Finnhub）──
-      case "sector_perf": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/us-sector-performance?token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      // ── VIX（恐怖指数）──
-      case "vix": {
-        const r = await fetch(
-          `https://finnhub.io/api/v1/quote?symbol=VIX&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      // ── 暗号資産 ──
-      case "crypto": {
-        const exchange = url.searchParams.get("exchange") ?? "BINANCE";
-        const r = await fetch(
-          `https://finnhub.io/api/v1/crypto/candle?symbol=${exchange}:${symbol}USDT&resolution=D&from=${Math.floor(Date.now()/1000-86400*30)}&to=${Math.floor(Date.now()/1000)}&token=${FINNHUB_KEY}`
-        );
-        data = await r.json();
-        break;
-      }
-
-      default:
-        return new Response(
-          JSON.stringify({ error: `Unknown endpoint: ${endpoint}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    if (!usdJpy && AV_KEY) {
+      try {
+        const avRes = await fetch(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey=${AV_KEY}`)
+        if (avRes.ok) {
+          const d = await avRes.json()
+          const rate = d?.['Realtime Currency Exchange Rate']?.['5. Exchange Rate']
+          if (rate) usdJpy = { rate: parseFloat(rate), change: null, changePercent: null, high: null, low: null, prevClose: null }
+        }
+      } catch {}
     }
 
     return new Response(
-      JSON.stringify({ ok: true, data, timestamp: Date.now() }),
-      {
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=60", // 1分キャッシュ
-        },
-      }
-    );
-
-  } catch (err) {
+      JSON.stringify({ nvda, usd_jpy: usdJpy, vix, updated_at: new Date().toISOString() }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  } catch (error) {
     return new Response(
-      JSON.stringify({ ok: false, error: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      JSON.stringify({ error: (error as Error).message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})
