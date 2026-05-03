@@ -1572,23 +1572,23 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       </div>
 
       <div class="grid-2">
-        <!-- Supabase設定 -->
+        <!-- Edge Function 接続テスト -->
         <div class="card">
-          <div class="card-title" style="font-size:13px; margin-bottom:16px;">🔌 Supabase接続設定</div>
-          <div style="display:flex; flex-direction:column; gap:12px;">
-            <div>
-              <div style="font-size:12px; color:var(--c-muted); margin-bottom:6px;">Supabase Project URL</div>
-              <input type="text" id="sb-url" placeholder="https://xxxxxxxx.supabase.co" style="width:100%; font-size:12px;">
-            </div>
-            <div>
-              <div style="font-size:12px; color:var(--c-muted); margin-bottom:6px;">Supabase Anon Key</div>
-              <input type="password" id="sb-anon-key" placeholder="eyJhbGciOiJIUzI1NiIs..." style="width:100%; font-size:12px;">
-            </div>
-            <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveSupabaseConfig()">
-              接続テスト &amp; 保存
-            </button>
-            <div id="sb-test-result" style="font-size:12px; color:var(--c-muted);"></div>
+          <div class="card-title" style="font-size:13px; margin-bottom:8px;">🔌 Edge Function 接続テスト</div>
+          <div style="font-size:12px; color:var(--c-muted); margin-bottom:14px; line-height:1.6;">
+            このアプリは <strong style="color:var(--c-accent);">verify_jwt=false</strong> の Edge Function を直接呼び出しているため、<br>
+            Supabase URLやAnon Keyの入力は不要です。
           </div>
+          <div style="background:var(--c-bg); border-radius:8px; padding:10px 12px; margin-bottom:10px;">
+            <div style="font-size:11px; color:var(--c-muted); margin-bottom:4px;">Edge Function URL</div>
+            <div style="font-size:12px; color:var(--c-accent); font-family:var(--f-en); word-break:break-all;">https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data</div>
+          </div>
+          <input type="hidden" id="sb-url" value="https://xyylcetlturlcdpouhaj.supabase.co">
+          <input type="hidden" id="sb-anon-key" value="">
+          <button class="btn btn-primary" style="width:100%; justify-content:center;" onclick="saveSupabaseConfig()">
+            接続テスト（Edge Function に疎通確認）
+          </button>
+          <div id="sb-test-result" style="font-size:12px; color:var(--c-muted); margin-top:8px;"></div>
         </div>
 
         <!-- API キー確認 -->
@@ -3133,6 +3133,79 @@ window.navigate = function(screen, el, isMob) {
   if (_origNav2) _origNav2(screen, el, isMob);
   if (screen === 'portfolio') renderPortfolio();
 };
+
+// ── API設定画面: 旧ロジックを上書き ─────────────────────────
+// 古いlocalStorageのゴミ値をクリア（project-ref のみのURL）
+(function(){
+  var saved = localStorage.getItem('stock_sb_url') || '';
+  if (saved && !saved.startsWith('http')) {
+    localStorage.removeItem('stock_sb_url');
+    localStorage.removeItem('stock_sb_key');
+  }
+})();
+
+// saveSupabaseConfig を上書き（Anon Key不要・Edge Functionに直接テスト）
+window.saveSupabaseConfig = function() {
+  var resultEl = document.getElementById('sb-test-result');
+  if (resultEl) resultEl.textContent = '🔄 Edge Function に接続中...';
+  setApiStatus('idle', '🔄 テスト中...');
+  edgeFetch({ action: 'market-data' }).then(function(d) {
+    if (d && (d.nvda || d.usd_jpy || d.vix)) {
+      setApiStatus('connected', '✅ Edge Function 接続成功 — データ取得中');
+      if (resultEl) resultEl.textContent = '✅ 接続成功！ USD/JPY: ' + (d.usd_jpy ? d.usd_jpy.rate.toFixed(2) : '—') + '  VIX: ' + (d.vix ? d.vix.value.toFixed(2) : '—');
+      // Update preview
+      var prev = document.getElementById('preview-result');
+      if (prev) prev.textContent = JSON.stringify(d, null, 2);
+    } else {
+      setApiStatus('error', '❌ Edge Functionからデータを取得できませんでした');
+      if (resultEl) resultEl.textContent = '❌ データなし: ' + JSON.stringify(d);
+    }
+  }).catch(function(e) {
+    setApiStatus('error', '❌ ' + e.message);
+    if (resultEl) resultEl.textContent = '❌ ' + e.message;
+  });
+};
+
+// testAllAPIs を上書き（各アクションを個別にテスト）
+window.testAllAPIs = function() {
+  var prev = document.getElementById('preview-result');
+  if (prev) prev.textContent = '各エンドポイントをテスト中...';
+  var tests = [
+    { label: 'market-data (USD/JPY・VIX・NVDA)', params: { action: 'market-data' } },
+    { label: 'quote NVDA', params: { action: 'quote', symbol: 'NVDA' } },
+    { label: 'quote 8035.T (東京エレクトロン)', params: { action: 'quote', symbol: '8035.T' } },
+  ];
+  var results = [];
+  var done = 0;
+  tests.forEach(function(t) {
+    edgeFetch(t.params).then(function(d) {
+      results.push('✅ ' + t.label + ': ' + JSON.stringify(d).slice(0, 120));
+    }).catch(function(e) {
+      results.push('❌ ' + t.label + ': ' + e.message);
+    }).finally(function() {
+      done++;
+      if (done >= tests.length && prev) prev.textContent = results.join('\n\n');
+    });
+  });
+};
+
+// 起動時: Edge Functionの疎通確認だけ行う（旧Supabase接続チェックは廃止）
+window.addEventListener('DOMContentLoaded', function() {
+  // URL入力欄に既知のプロジェクトURLを表示（参考用）
+  var urlEl = document.getElementById('sb-url');
+  if (urlEl) urlEl.value = 'https://xyylcetlturlcdpouhaj.supabase.co';
+  var keyEl = document.getElementById('sb-anon-key');
+  if (keyEl && !keyEl.value) keyEl.placeholder = 'Anon Keyは不要です（verify_jwt=false）';
+
+  // Finnhub/AV/JQuants のバッジを「確認済み」に更新
+  var badges = document.querySelectorAll('#screen-api-settings .card .btn');
+  // API設定バナーを Edge Function ステータスで更新
+  edgeFetch({ action: 'market-data' }).then(function(d) {
+    if (d && (d.nvda || d.usd_jpy || d.vix)) {
+      setApiStatus('connected', '✅ Edge Function 正常稼働中 — 設定不要');
+    }
+  }).catch(function() {});
+});
 
 // ── 初期化 ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
