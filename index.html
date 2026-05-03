@@ -34,26 +34,6 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
-
-<script>
-(function(){
-  var URL='https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data';
-  function findCard(label){
-    var cards=document.querySelectorAll('.stat-card');
-    for(var i=0;i<cards.length;i++){var l=cards[i].querySelector('.stat-label');if(l&&l.textContent.trim()===label)return cards[i].querySelector('.stat-value');}
-    return null;
-  }
-  async function load(){
-    try{
-      var d=await(await fetch(URL)).json();
-      if(d.usd_jpy&&d.usd_jpy.rate){var e=findCard('USD/JPY');if(e)e.textContent=d.usd_jpy.rate.toFixed(2);}
-      if(d.vix&&d.vix.value){var v=findCard('VIX');if(v){v.textContent=d.vix.value.toFixed(2);v.style.color=d.vix.value>=30?'var(--c-red)':d.vix.value>=20?'var(--c-yellow)':'var(--c-accent)';}}
-      if(d.nvda&&d.nvda.price){var n=document.getElementById('stock-price');if(n&&document.getElementById('stock-name')&&document.getElementById('stock-name').textContent==='NVIDIA')n.textContent='$'+d.nvda.price.toFixed(2);}
-    }catch(e){console.warn('[market-data]',e);}
-  }
-  load();setInterval(load,30000);
-})();
-</script>
   
 body {
   background: var(--c-bg);
