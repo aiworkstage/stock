@@ -2572,5 +2572,29 @@ setInterval(function() {
   if (SUPABASE_URL && SUPABASE_ANON_KEY) refreshMarketData();
 }, 30000);
 </script>
+
+<script>
+(function(){
+  var EDGE='https://xyylcetlturlcdpouhaj.supabase.co/functions/v1/market-data';
+  function card(label){
+    var els=document.querySelectorAll('.stat-card');
+    for(var i=0;i<els.length;i++){
+      var l=els[i].querySelector('.stat-label');
+      if(l&&l.textContent.trim()===label)return els[i].querySelector('.stat-value');
+    }
+  }
+  function load(){
+    fetch(EDGE).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      if(!d)return;
+      if(d.usd_jpy&&d.usd_jpy.rate){var e=card('USD/JPY');if(e)e.textContent=d.usd_jpy.rate.toFixed(2);}
+      if(d.vix&&typeof d.vix.value==='number'){
+        var v=card('VIX');
+        if(v){v.textContent=d.vix.value.toFixed(2);v.style.color=d.vix.value>=30?'var(--c-red)':d.vix.value>=20?'var(--c-yellow)':'var(--c-accent)';}
+      }
+    }).catch(function(){});
+  }
+  load();setInterval(load,30000);
+})();
+</script>
 </body>
 </html>
