@@ -430,8 +430,10 @@ body {
 
 .mob-nav-items {
   display: flex;
+  width: 100%;
   height: 100%;
   align-items: stretch;
+  justify-content: space-around;
 }
 
 .mob-nav-item {
@@ -1207,14 +1209,33 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
       <!-- Holdings + scenarios -->
       <div class="grid-2">
         <div class="card">
-          <div class="card-title">保有銘柄</div>
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <div class="card-title" style="margin-bottom:0;">保有銘柄</div>
+            <button class="btn btn-primary" style="font-size:11px; padding:5px 12px;" onclick="showPortfolioAdd()">+ 追加</button>
+          </div>
+          <!-- 銘柄追加フォーム（初期非表示）-->
+          <div id="portfolio-add-form" style="display:none; background:var(--c-bg); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-size:12px; color:var(--c-muted); margin-bottom:8px;">新規銘柄を追加</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <input type="text" id="pf-code" placeholder="銘柄コード（例: 9424 / NVDA）" style="font-size:13px;">
+              <input type="text" id="pf-name" placeholder="銘柄名（例: 日本通信）" style="font-size:13px;">
+              <div style="display:flex; gap:6px;">
+                <input type="number" id="pf-shares" placeholder="保有株数" style="font-size:13px; flex:1;" min="1">
+                <input type="number" id="pf-avg" placeholder="平均取得単価(円)" style="font-size:13px; flex:1;" min="0" step="0.01">
+              </div>
+              <label style="font-size:12px; color:var(--c-muted); display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="pf-isjpy" checked> 日本株（JPY）
+              </label>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                <button class="btn btn-primary" style="flex:1; font-size:12px;" onclick="portfolioAdd()">追加</button>
+                <button class="btn" style="font-size:12px; padding:6px 12px;" onclick="document.getElementById('portfolio-add-form').style.display='none'">キャンセル</button>
+              </div>
+            </div>
+          </div>
           <table class="data-table">
-            <thead><tr><th>銘柄</th><th>保有額</th><th>損益</th><th>AI</th><th>判定</th></tr></thead>
-            <tbody>
-              <tr><td><div style="font-weight:600;">東京エレクトロン</div><div style="color:var(--c-muted); font-size:11px;">8035</div></td><td style="font-family:var(--f-en); font-size:13px;">¥68万</td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:13px;">+¥8.2万</td><td><div class="score-ring high" style="width:34px; height:34px; font-size:12px;">87</div></td><td><span class="pill pill-green">継続</span></td></tr>
-              <tr><td><div style="font-weight:600;">NVIDIA</div><div style="color:var(--c-muted); font-size:11px;">NVDA</div></td><td style="font-family:var(--f-en); font-size:13px;">¥54万</td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:13px;">+¥21万</td><td><div class="score-ring high" style="width:34px; height:34px; font-size:12px;">92</div></td><td><span class="pill pill-green">買増</span></td></tr>
-              <tr><td><div style="font-weight:600;">トヨタ</div><div style="color:var(--c-muted); font-size:11px;">7203</div></td><td style="font-family:var(--f-en); font-size:13px;">¥32万</td><td style="color:var(--c-red); font-family:var(--f-en); font-size:13px;">−¥1.8万</td><td><div class="score-ring mid" style="width:34px; height:34px; font-size:12px;">54</div></td><td><span class="pill pill-yellow">注視</span></td></tr>
-              <tr><td><div style="font-weight:600;">eMAXIS Slim</div><div style="color:var(--c-muted); font-size:11px;">投信</div></td><td style="font-family:var(--f-en); font-size:13px;">¥20万</td><td style="color:var(--c-accent); font-family:var(--f-en); font-size:13px;">+¥2.6万</td><td><div class="score-ring high" style="width:34px; height:34px; font-size:12px;">79</div></td><td><span class="pill pill-green">継続</span></td></tr>
+            <thead><tr><th>銘柄</th><th>取得額</th><th>現在値</th><th>損益</th><th></th></tr></thead>
+            <tbody id="portfolio-tbody">
+              <tr><td colspan="5" style="text-align:center; color:var(--c-muted); padding:20px;">「+ 追加」で保有株を登録してください</td></tr>
             </tbody>
           </table>
         </div>
@@ -1690,20 +1711,16 @@ APIを設定して「接続テスト」を実行してください
       <span>銘柄</span>
     </button>
     <button class="mob-nav-item" id="mob-portfolio" onclick="navigate('portfolio',null,true)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
       <span>資産</span>
     </button>
-    <button class="mob-nav-item" id="mob-anomaly" onclick="navigate('anomaly',null,true)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-      <span>暦</span>
+    <button class="mob-nav-item" id="mob-boro" onclick="navigate('boro',null,true)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>ボロ株</span>
     </button>
     <button class="mob-nav-item" id="mob-stock-ranking" onclick="navigate('stock-ranking',null,true)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       <span>株順位</span>
-    </button>
-    <button class="mob-nav-item" id="mob-fund-ranking" onclick="navigate('fund-ranking',null,true)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span>投信順位</span>
     </button>
   </div>
 </nav>
@@ -2409,31 +2426,45 @@ showFundRank('fee', document.getElementById('fr-tab-fee'));
 // ═══════════════════════════════════════
 
 // localStorageから設定を読み込む
-var SUPABASE_URL = localStorage.getItem('stock_sb_url') || '';
+var KNOWN_PROJECT = 'xyylcetlturlcdpouhaj';
+var KNOWN_URL = 'https://' + KNOWN_PROJECT + '.supabase.co';
+
+function fixSupabaseUrl(raw) {
+  if (!raw) return '';
+  raw = raw.trim();
+  // Just project ref entered (e.g. "xyylcetlturlcdpouhaj")
+  if (!raw.includes('.') && !raw.startsWith('http')) return 'https://' + raw + '.supabase.co';
+  // Missing https://
+  if (!raw.startsWith('http')) return 'https://' + raw;
+  // Remove trailing slash
+  return raw.replace(/\/$/, '');
+}
+
+var SUPABASE_URL = fixSupabaseUrl(localStorage.getItem('stock_sb_url') || KNOWN_URL);
 var SUPABASE_ANON_KEY = localStorage.getItem('stock_sb_key') || '';
 
 // 起動時に設定を復元
 window.addEventListener('DOMContentLoaded', function() {
-  if (SUPABASE_URL) {
-    var el = document.getElementById('sb-url');
-    if (el) el.value = SUPABASE_URL;
-  }
-  if (SUPABASE_ANON_KEY) {
-    var el2 = document.getElementById('sb-anon-key');
-    if (el2) el2.value = SUPABASE_ANON_KEY;
-  }
+  var urlEl = document.getElementById('sb-url');
+  var keyEl = document.getElementById('sb-anon-key');
+  if (urlEl) urlEl.value = SUPABASE_URL || KNOWN_URL;
+  if (keyEl && SUPABASE_ANON_KEY) keyEl.value = SUPABASE_ANON_KEY;
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     setApiStatus('connected', 'Supabase接続済み — データ取得中...');
-    // 起動時に主要データを自動更新
     setTimeout(refreshMarketData, 1000);
+  } else if (SUPABASE_URL) {
+    setApiStatus('idle', 'Supabase URL設定済み — Anon Keyを入力してください');
   }
 });
 
 function saveSupabaseConfig() {
-  var url = document.getElementById('sb-url').value.trim();
+  var raw = document.getElementById('sb-url').value.trim();
   var key = document.getElementById('sb-anon-key').value.trim();
-  if (!url || !key) {
-    document.getElementById('sb-test-result').textContent = '⚠️ URLとAnon Keyを両方入力してください';
+  var url = fixSupabaseUrl(raw) || KNOWN_URL;
+  // Update field with fixed URL
+  document.getElementById('sb-url').value = url;
+  if (!key) {
+    document.getElementById('sb-test-result').textContent = '⚠️ Anon Keyを入力してください';
     return;
   }
   SUPABASE_URL = url;
@@ -2983,10 +3014,129 @@ window.navigate = function(screen, el, isMob) {
   }
 };
 
+// ── ポートフォリオ管理 ────────────────────────────────────
+var PF_KEY = 'stock_portfolio_v2';
+
+function pfLoad() {
+  try { return JSON.parse(localStorage.getItem(PF_KEY) || '[]'); } catch { return []; }
+}
+function pfSave(arr) { localStorage.setItem(PF_KEY, JSON.stringify(arr)); }
+
+function showPortfolioAdd() {
+  var f = document.getElementById('portfolio-add-form');
+  if (f) f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function portfolioAdd() {
+  var code   = (document.getElementById('pf-code').value   || '').trim().toUpperCase();
+  var name   = (document.getElementById('pf-name').value   || '').trim() || code;
+  var shares = parseFloat(document.getElementById('pf-shares').value || '0');
+  var avg    = parseFloat(document.getElementById('pf-avg').value    || '0');
+  var isJpy  = document.getElementById('pf-isjpy').checked;
+  if (!code || !shares || !avg) { alert('コード・株数・平均取得単価を入力してください'); return; }
+  var arr = pfLoad();
+  var sym = isJpy ? (code.endsWith('.T') ? code : code + '.T') : code;
+  arr.push({ code, name, sym, shares, avg, isJpy });
+  pfSave(arr);
+  document.getElementById('pf-code').value = '';
+  document.getElementById('pf-name').value = '';
+  document.getElementById('pf-shares').value = '';
+  document.getElementById('pf-avg').value = '';
+  document.getElementById('portfolio-add-form').style.display = 'none';
+  renderPortfolio();
+}
+
+function portfolioDelete(idx) {
+  var arr = pfLoad();
+  arr.splice(idx, 1);
+  pfSave(arr);
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  var arr = pfLoad();
+  var tbody = document.getElementById('portfolio-tbody');
+  if (!tbody) return;
+
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--c-muted); padding:24px;">「+ 追加」で保有株を登録してください</td></tr>';
+    updatePortfolioSummary(0, 0, 0);
+    return;
+  }
+
+  tbody.innerHTML = arr.map(function(h, i) {
+    var costTotal = h.shares * h.avg;
+    var costStr   = h.isJpy ? '¥' + Math.round(costTotal).toLocaleString() : '$' + costTotal.toFixed(0);
+    return '<tr id="pf-row-'+i+'">' +
+      '<td><div style="font-weight:600;">'+h.name+'</div><div style="color:var(--c-muted);font-size:11px;">'+h.code+'</div></td>' +
+      '<td style="font-family:var(--f-en);font-size:13px;">'+costStr+'</td>' +
+      '<td id="pf-cur-'+i+'" style="font-family:var(--f-en);font-size:13px;color:var(--c-muted);">—</td>' +
+      '<td id="pf-pnl-'+i+'" style="font-family:var(--f-en);font-size:13px;color:var(--c-muted);">—</td>' +
+      '<td><button onclick="portfolioDelete('+i+')" style="background:none;border:none;color:var(--c-dim);cursor:pointer;font-size:16px;padding:0 4px;" title="削除">×</button></td>' +
+      '</tr>';
+  }).join('');
+
+  // Fetch live quotes
+  var totalCost = 0, totalValue = 0;
+  var pending = arr.length;
+  arr.forEach(function(h, i) {
+    totalCost += h.shares * h.avg;
+    edgeFetch({ action: 'quote', symbol: h.sym }).then(function(d) {
+      pending--;
+      if (d && d.quote && d.quote.price) {
+        var q = d.quote;
+        var cur = h.shares * q.price;
+        totalValue += cur;
+        var pnl = cur - h.shares * h.avg;
+        var pnlPct = h.avg ? pnl / (h.shares * h.avg) * 100 : 0;
+        var col = pnl >= 0 ? 'var(--c-accent)' : 'var(--c-red)';
+        var curStr = h.isJpy ? '¥' + Math.round(cur).toLocaleString() : '$' + cur.toFixed(0);
+        var pnlStr = (pnl >= 0 ? '+' : '') + (h.isJpy ? '¥' + Math.round(pnl).toLocaleString() : '$' + pnl.toFixed(0)) +
+          ' (' + (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '%)';
+        var curEl = document.getElementById('pf-cur-' + i);
+        var pnlEl = document.getElementById('pf-pnl-' + i);
+        if (curEl) curEl.textContent = curStr;
+        if (pnlEl) { pnlEl.textContent = pnlStr; pnlEl.style.color = col; }
+      } else {
+        totalValue += h.shares * h.avg; // fallback: cost = value
+      }
+      if (pending <= 0) updatePortfolioSummary(totalCost, totalValue);
+    }).catch(function() {
+      pending--;
+      totalValue += h.shares * h.avg;
+      if (pending <= 0) updatePortfolioSummary(totalCost, totalValue);
+    });
+  });
+}
+
+function updatePortfolioSummary(cost, value) {
+  var pnl    = value - cost;
+  var pnlPct = cost > 0 ? pnl / cost * 100 : 0;
+  function el(id, txt, col) {
+    var e = document.querySelector('#screen-portfolio .stat-card:nth-child(' + id + ') .stat-value');
+    if (e) { e.textContent = txt; if (col) e.style.color = col; }
+    var c = document.querySelector('#screen-portfolio .stat-card:nth-child(' + id + ') .stat-change');
+    if (c && id === 1) c.textContent = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(1) + '% 全期間';
+  }
+  el(1, '¥' + Math.round(value / 10000) + '万', null);
+  el(2, '¥' + Math.round(cost  / 10000) + '万', null);
+  var pnlEl = document.querySelector('#screen-portfolio .stat-card:nth-child(3) .stat-value');
+  if (pnlEl) {
+    pnlEl.textContent = (pnl >= 0 ? '+' : '') + '¥' + Math.round(Math.abs(pnl) / 10000) + '万';
+    pnlEl.style.color = pnl >= 0 ? 'var(--c-accent)' : 'var(--c-red)';
+  }
+}
+
+// navigate拡張にportfolioも追加
+var _origNav2 = window.navigate;
+window.navigate = function(screen, el, isMob) {
+  if (_origNav2) _origNav2(screen, el, isMob);
+  if (screen === 'portfolio') renderPortfolio();
+};
+
 // ── 初期化 ────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  // デフォルトの銘柄でstock画面クオートは8035
-  // チャートはクリック時に読み込む（パフォーマンス優先）
+  renderPortfolio();
 });
 </script>
 </body>
